@@ -1,26 +1,24 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
 using BH_Launcher.ViewModels;
-using CommunityToolkit.Mvvm.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace BH_Launcher
+namespace BH_Launcher.Views
 {
-    public partial class MainWindow : Window
+    public partial class MainView : Window
     {
-        private readonly LauncherViewModel _vm;
+        private readonly MainViewModel _vm;
 
-        public MainWindow()
+        public MainView(MainViewModel vm)
         {
             InitializeComponent();
 
-            _vm = Ioc.Default.GetRequiredService<LauncherViewModel>();
+            _vm = vm;
             DataContext = _vm;
 
             _vm.LaunchRequested += (_, _) =>
             {
-                MessageBox.Show("여기서 실제 프로그램을 실행합니다. (더미)", "런처",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                if (!_vm.TryLaunchProgram(out string message))
+                    MessageBox.Show(this, message, "런처", MessageBoxButton.OK, MessageBoxImage.Information);
                 Close();
             };
 

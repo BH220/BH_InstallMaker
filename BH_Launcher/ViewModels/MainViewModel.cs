@@ -1,10 +1,16 @@
+﻿using System.Diagnostics;
+using System.IO;
+using BH_Install.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BH_Launcher.ViewModels
 {
-    public partial class LauncherViewModel : ObservableObject
+    public partial class MainViewModel : ObservableObject
     {
-        //더미 업데이트 파일 목록 (이름, 크기 MB)
+        // 메이커가 임베드한 매니페스트. 없으면(F5 디버깅) 더미 화면.
+        private readonly ProgramModel? _model;
+
+        //더미 업데이트 파일 목록 (이름, 크기 MB). 업데이트 서버 연동 전까지의 자리표시자다.
         private sealed record DummyFile(string Name, double SizeMb);
 
         private static readonly DummyFile[] Files =
@@ -36,6 +42,16 @@ namespace BH_Launcher.ViewModels
         [ObservableProperty]
         private string percentText = "0%";
 
+        public MainViewModel()
+        {
+            _model = ProgramManifest.LoadEmbedded();
+            if (_model is not null)
+            {
+                ProgramName = _model.Name;
+                VersionText = $"v{_model.Version}";
+            }
+        }
+
         //업데이트 완료 후 실제 프로그램 실행 요청
         public event EventHandler? LaunchRequested;
 
@@ -45,7 +61,7 @@ namespace BH_Launcher.ViewModels
                 return;
             _started = true;
 
-            // 1) 업데이트 확인 (더미)
+            // 1) 업데이트 확인 (더미 - 업데이트 리스트 연동 예정)
             for (int i = 0; i < 20; i++)
             {
                 StatusText = "서버에서 업데이트 확인 중" + new string('.', i % 3 + 1);
@@ -75,10 +91,50 @@ namespace BH_Launcher.ViewModels
             PercentText = "100%";
             DetailText = $"{_totalMb:0.0} / {_totalMb:0.0} MB";
             StatusText = "최신 버전입니다. 잠시 후 프로그램을 시작합니다...";
-            VersionText = "v1.3.1";
+            VersionText = _model is null ? "v1.3.1" : $"v{_model.Version}";
 
             await Task.Delay(1500);
             LaunchRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        // 매니페스트의 MainExe 를 런처 폴더 기준으로 실행한다.
+        // 실패하면 false 와 사용자에게 보여줄 문구를 돌려준다.
+        public bool TryLaunchProgram(out string message)
+        {
+            if (_model is null)
+            {
+                message = "매니페스트가 없습니다. 여기서 실제 프로그램을 실행합니다. (미리보기)";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(_model.MainExe))
+            {
+                message = "실행할 메인 프로그램이 지정되지 않았습니다.";
+                return false;
+            }
+
+            string exe = Path.Combine(AppContext.BaseDirectory, _model.MainExe);
+            if (!File.Exists(exe))
+            {
+                message = $"프로그램 파일이 없습니다.\n{exe}\n\n업데이트 서버 연동 후에는 여기서 자동으로 내려받습니다.";
+                return false;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo(exe)
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = Path.GetDirectoryName(exe),
+                });
+                message = string.Empty;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                message = $"프로그램을 실행할 수 없습니다.\n{ex.Message}";
+                return false;
+            }
         }
     }
 }

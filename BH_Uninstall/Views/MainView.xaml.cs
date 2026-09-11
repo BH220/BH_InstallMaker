@@ -1,51 +1,52 @@
-using System.Collections.Specialized;
+﻿using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using BH_Uninstall.ViewModels;
-using CommunityToolkit.Mvvm.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace BH_Uninstall
+namespace BH_Uninstall.Views
 {
-    public partial class MainWindow : Window
+    public partial class MainView : Window
     {
-        private readonly UninstallViewModel _vm;
+        private readonly MainViewModel _vm;
 
-        public MainWindow()
+        public MainView(MainViewModel vm)
         {
             InitializeComponent();
 
-            _vm = Ioc.Default.GetRequiredService<UninstallViewModel>();
+            _vm = vm;
             DataContext = _vm;
 
             _vm.CloseRequested += (_, _) => Close();
             _vm.PropertyChanged += OnViewModelPropertyChanged;
             ((INotifyCollectionChanged)_vm.Logs).CollectionChanged += (_, _) => LogScroll.ScrollToEnd();
+
+            //제거가 끝난 뒤 창을 닫으면 자기 exe 삭제를 예약한다
+            Closing += (_, _) => _vm.OnWindowClosing();
         }
 
         //화면 전환은 순수 시각 효과이므로 뷰에서 처리
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName != nameof(UninstallViewModel.ScreenIndex))
+            if (e.PropertyName != nameof(MainViewModel.ScreenIndex))
                 return;
 
-            PanelConfirm.Visibility = _vm.ScreenIndex == UninstallViewModel.ScreenConfirm ? Visibility.Visible : Visibility.Collapsed;
-            PanelProgress.Visibility = _vm.ScreenIndex == UninstallViewModel.ScreenProgress ? Visibility.Visible : Visibility.Collapsed;
-            PanelDone.Visibility = _vm.ScreenIndex == UninstallViewModel.ScreenDone ? Visibility.Visible : Visibility.Collapsed;
+            PanelConfirm.Visibility = _vm.ScreenIndex == MainViewModel.ScreenConfirm ? Visibility.Visible : Visibility.Collapsed;
+            PanelProgress.Visibility = _vm.ScreenIndex == MainViewModel.ScreenProgress ? Visibility.Visible : Visibility.Collapsed;
+            PanelDone.Visibility = _vm.ScreenIndex == MainViewModel.ScreenDone ? Visibility.Visible : Visibility.Collapsed;
 
             var target = _vm.ScreenIndex switch
             {
-                UninstallViewModel.ScreenConfirm => PanelConfirm,
-                UninstallViewModel.ScreenProgress => PanelProgress,
+                MainViewModel.ScreenConfirm => PanelConfirm,
+                MainViewModel.ScreenProgress => PanelProgress,
                 _ => PanelDone,
             };
             PlayEnterAnimation(target);
 
             //완료 화면에서는 닫기 버튼을 기본 스타일로
-            if (_vm.ScreenIndex == UninstallViewModel.ScreenDone)
+            if (_vm.ScreenIndex == MainViewModel.ScreenDone)
                 BtnAction.Style = (Style)FindResource("Btn.Primary");
         }
 

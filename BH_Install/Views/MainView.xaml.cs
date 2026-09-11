@@ -1,4 +1,4 @@
-using System.Collections.Specialized;
+﻿using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -6,22 +6,20 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using BH_Install.ViewModels;
-using CommunityToolkit.Mvvm.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace BH_Install
+namespace BH_Install.Views
 {
-    public partial class MainWindow : Window
+    public partial class MainView : Window
     {
-        private readonly InstallViewModel _vm;
+        private readonly MainViewModel _vm;
         private FrameworkElement[] _steps = null!;
         private (Border Chip, TextBlock Num)[] _stepChips = null!;
 
-        public MainWindow()
+        public MainView(MainViewModel vm)
         {
             InitializeComponent();
 
-            _vm = Ioc.Default.GetRequiredService<InstallViewModel>();
+            _vm = vm;
             DataContext = _vm;
 
             _steps = new FrameworkElement[] { Step0, Step1, Step2, Step3 };
@@ -43,7 +41,7 @@ namespace BH_Install
         //단계 전환의 시각 효과(패널 전환/애니메이션/사이드바)는 뷰에서 처리
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(InstallViewModel.CurrentStep))
+            if (e.PropertyName == nameof(MainViewModel.CurrentStep))
                 ShowStep(_vm.CurrentStep, animate: true);
         }
 

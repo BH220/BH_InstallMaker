@@ -7,11 +7,20 @@
        주의: VS 게시는 pubxml 의 속성만 전역 속성으로 넘기고 pubxml 파일 자체는 임포트하지 않는다.
        그래서 pubxml 에 적은 Target 은 VS 에서 무시된다. 게시 관련 타깃은 반드시 여기에 둔다.
 
-       게시 흐름:  게시 폴더 초기화 → 빌드/번들 → pdb 제외 → 게시 폴더 복사 → 코드 서명 -->
+       게시 흐름:  게시 폴더 초기화 → (매니페스트 임베드) 빌드/번들 → pdb 제외 → 게시 폴더 복사 → 코드 서명
+       메이커가 게시할 때는 -p:BH_SignAfterPublish=false 로 서명 훅을 끄고 메이커가 직접 서명한다. -->
 
+  <!-- 메이커(BH_InstallerMaker)가 모듈을 게시할 때 -p:BH_ProgramJson=<program.json> 으로 넘긴 프로그램 매니페스트를
+       진입 어셈블리에 임베드한다. ProgramManifest.LoadEmbedded() 가 이 이름으로 읽는다.
+       지정하지 않으면(VS 게시, F5 디버깅) 리소스가 없고 모듈은 더미 값으로 동작한다. -->
+  <ItemGroup Condition="'$(BH_ProgramJson)' != ''">
+    <EmbeddedResource Include="$(BH_ProgramJson)" LogicalName="BH.program.json" />
+  </ItemGroup>
   <PropertyGroup>
     <!-- 게시 시 이 프로젝트의 pdb 를 게시 폴더에 복사하지 않는다. (빌드 출력에는 그대로 남는다) -->
     <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+    <!-- exe 속성의 제품 버전에 git 커밋 해시(+abc123...)가 붙지 않게 한다 -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 
     <!-- 게시 후 코드 서명. 끄려면 -p:BH_SignAfterPublish=false -->
     <BH_SignAfterPublish Condition="'$(BH_SignAfterPublish)' == ''">true</BH_SignAfterPublish>

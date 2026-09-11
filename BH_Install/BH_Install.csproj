@@ -12,6 +12,7 @@
     <!-- 코드 서명 시 UAC 대화상자에 표시될 이름 -->
     <BH_SignDescription>BH Soft Installer</BH_SignDescription>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
@@ -25,7 +26,17 @@
     <Resource Include="main_icon.ico" />
   </ItemGroup>
 
-  <!-- 게시 폴더 초기화, pdb 제외, 게시 후 코드 서명 등 공용 게시 규칙 -->
+  <!-- 메이커가 게시할 때 서명된 런처·언인스톨 exe 를 페이로드로 임베드한다.
+       -p:BH_LauncherExe=<경로> -p:BH_UninstallExe=<경로>
+       설치 프로그램은 ProgramManifest.ExtractPayload() 로 설치 폴더에 꺼낸다. -->
+  <ItemGroup Condition="'$(BH_LauncherExe)' != ''">
+    <EmbeddedResource Include="$(BH_LauncherExe)" LogicalName="BH.payload.BH_Launcher.exe" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(BH_UninstallExe)' != ''">
+    <EmbeddedResource Include="$(BH_UninstallExe)" LogicalName="BH.payload.BH_Uninstall.exe" />
+  </ItemGroup>
+
+  <!-- 게시 폴더 초기화, pdb 제외, 매니페스트 임베드, 게시 후 코드 서명 등 공용 게시 규칙 -->
   <Import Project="..\BH.Publish.targets" />
 
 </Project>

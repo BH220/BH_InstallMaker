@@ -1,19 +1,19 @@
-<Window
-    x:Class="BH_Install.MainWindow"
+﻿<Window
+    x:Class="BH_Install.Views.MainView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="clr-namespace:BH_Install"
+    xmlns:local="clr-namespace:BH_Install.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="clr-namespace:BH_Install.ViewModels"
     Title="설치 마법사"
     Width="808"
     Height="560"
-    d:DataContext="{d:DesignInstance Type=vm:InstallViewModel}"
+    d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
     AllowsTransparency="True"
     Background="Transparent"
     FontFamily="Segoe UI, Malgun Gothic"
-    Icon="main_icon.ico"
+    Icon="/main_icon.ico"
     ResizeMode="NoResize"
     TextOptions.TextFormattingMode="Display"
     WindowStartupLocation="CenterScreen"
@@ -502,7 +502,7 @@
                                 Margin="0,22,0,0"
                                 HorizontalAlignment="Center"
                                 Style="{StaticResource Text.Title}"
-                                Text="설치가 완료되었습니다" />
+                                Text="{Binding DoneTitle}" />
                             <TextBlock
                                 Margin="0,10,0,0"
                                 HorizontalAlignment="Center"

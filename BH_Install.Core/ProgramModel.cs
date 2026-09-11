@@ -1,32 +1,29 @@
 ﻿namespace BH_Install.Core
 {
+    //설치 대상 프로그램 정보(프로그램 매니페스트).
+    //메이커가 채워 <프로젝트>.bhinstaller.json 에 저장하고, 게시할 때 program.json 으로
+    //설치·런처·언인스톨 모듈에 임베드한다. 모듈은 ProgramManifest.LoadEmbedded() 로 읽는다.
     public class ProgramModel
     {
-        //프로그램이름(윈도우 서비스일 경우 표시 이름)
-        public string Name { get; set; }
+        //프로그램 이름. "앱 및 기능" 의 Uninstall 레지스트리 키 이름으로도 쓴다.
+        public string Name { get; set; } = "";
         //프로그램 제작자
-        public string Publisher { get; set; }
+        public string Publisher { get; set; } = "";
         //프로그램 버전
-        public string Version { get; set; }
+        public string Version { get; set; } = "";
         //프로그램 설명
-        public string Description { get; set; }
+        public string Description { get; set; } = "";
         //프로그램 실행 루트 경로
-        public string RootPath { get; set; }
+        public string RootPath { get; set; } = "";
         //프로그램 데이터 저장 루트 경로
-        public string DataRootPath { get; set; }
+        public string DataRootPath { get; set; } = "";
         //레지스트리를 사용한 경우 그 루트 경로(HKEY_LOCAL_MACHINE만 가능)
-        public string RegistryKey { get; set; }
+        public string RegistryKey { get; set; } = "";
+        //런처가 실행할 대상 프로그램 exe (RootPath 기준 상대 경로). 메이커가 csproj 의 AssemblyName 으로 자동 결정한다.
+        public string MainExe { get; set; } = "";
 
-        //윈도우 서비스 사용시
-        public bool UseWindowsService { get; set; } = false;
-        //윈도우서비스로 동작할 경우 서비스 이름(영문, 띄어쓰기 없음)
-        public string WindowsServiceName { get; set; }
-        //윈도우서비스로 동작할 경우 서비스 설명(한글, 띄어쓰기 가능)
-        public string WindowsServiceDescription { get; set; }
 
-        //라이선스를 확인하는 경우
-        public bool UseLicense { get; set; } = false;
-        //라이선스를 확인하는 경우 프로그램 ID(DB에서 확인)
+        //라이선스 인증은 모든 프로그램이 필수로 사용한다. DB 에서 확인하는 프로그램 ID.
         public int ProgramId { get; set; }
     }
 }

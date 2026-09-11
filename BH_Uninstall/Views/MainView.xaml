@@ -1,19 +1,19 @@
-<Window
-    x:Class="BH_Uninstall.MainWindow"
+﻿<Window
+    x:Class="BH_Uninstall.Views.MainView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="clr-namespace:BH_Uninstall"
+    xmlns:local="clr-namespace:BH_Uninstall.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="clr-namespace:BH_Uninstall.ViewModels"
     Title="프로그램 제거"
     Width="664"
     Height="500"
-    d:DataContext="{d:DesignInstance Type=vm:UninstallViewModel}"
+    d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
     AllowsTransparency="True"
     Background="Transparent"
     FontFamily="Segoe UI, Malgun Gothic"
-    Icon="main_icon.ico"
+    Icon="/_0049_Trash.ico"
     ResizeMode="NoResize"
     TextOptions.TextFormattingMode="Display"
     WindowStartupLocation="CenterScreen"
@@ -143,7 +143,7 @@
                                     FontSize="12.5"
                                     Foreground="#8A3A3E"
                                     LineHeight="20"
-                                    Text="프로그램 파일, 레지스트리, 바로 가기, Windows 서비스, 다운로드한 파일과 사용자 데이터가 모두 삭제되며 되돌릴 수 없습니다."
+                                    Text="프로그램 파일, 레지스트리, 바로 가기가 삭제되며 되돌릴 수 없습니다. 데이터 폴더는 유지됩니다."
                                     TextWrapping="Wrap" />
                             </Grid>
                         </Border>
@@ -234,7 +234,7 @@
                             Margin="0,22,0,0"
                             HorizontalAlignment="Center"
                             Style="{StaticResource Text.Title}"
-                            Text="제거가 완료되었습니다" />
+                            Text="{Binding DoneTitle}" />
                         <TextBlock
                             Margin="0,10,0,0"
                             HorizontalAlignment="Center"

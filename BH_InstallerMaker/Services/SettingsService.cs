@@ -4,11 +4,13 @@ using BH_Install.Core;
 
 namespace BH_InstallerMaker.Services
 {
-    //앱 재시작 후에도 유지할 사용자 설정. 암호는 여기에 저장하지 않는다.
+    //앱 재시작 후에도 유지할 사용자 설정.
+    //코드 서명은 필수라 켜고 끄는 값이 없고, 모듈 소스 위치는 메이커 실행 위치에서 자동으로 찾는다.
     public sealed class MakerSettings
     {
-        public bool UseCodeSigning { get; set; }
         public string PfxPath { get; set; } = "";
+        //PFX 암호. SecretProtector 로 AES 암호화한 Base64 문자열
+        public string PfxPasswordEnc { get; set; } = "";
         public string TimestampUrl { get; set; } = CodeSigner.DefaultTimestampUrl;
     }
 

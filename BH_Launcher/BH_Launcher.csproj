@@ -6,10 +6,17 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>main_icon.ico</ApplicationIcon>
+    <!-- 관리자 권한 요구. 설치 폴더 갱신·HKLM·서비스 제어에 필요하다. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- 코드 서명 시 UAC 대화상자에 표시될 이름 -->
     <BH_SignDescription>BH Soft Launcher</BH_SignDescription>
   </PropertyGroup>
+
+
+  <ItemGroup>
+    <None Remove="main_icon.ico" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
@@ -19,8 +26,15 @@
     <ProjectReference Include="..\BH_Install.Core\BH_Install.Core.csproj" />
   </ItemGroup>
 
+  <!-- 런처 아이콘. 메이커가 -p:BH_LauncherIcon=<대상 프로그램의 .ico> 를 넘기면
+       exe 아이콘(ApplicationIcon)과 창 아이콘(리소스)이 모두 그 파일로 바뀐다.
+       리소스 이름은 Link 로 main_icon.ico 에 고정하므로 MainView.xaml 의 Icon="main_icon.ico" 는 그대로 동작한다. -->
+  <PropertyGroup>
+    <BH_LauncherIcon Condition="'$(BH_LauncherIcon)' == ''">main_icon.ico</BH_LauncherIcon>
+    <ApplicationIcon>$(BH_LauncherIcon)</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
-    <Resource Include="main_icon.ico" />
+    <Resource Include="$(BH_LauncherIcon)" Link="main_icon.ico" />
   </ItemGroup>
 
   <!-- 게시 폴더 초기화, pdb 제외, 게시 후 코드 서명 등 공용 게시 규칙 -->
