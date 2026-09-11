@@ -1,0 +1,71 @@
+﻿<Project>
+  <!-- ===== BH 앱 공용 게시 규칙 =====
+       BH_Install / BH_Launcher / BH_Uninstall 의 csproj 끝에서 Import 한다.
+       단일 파일 게시 속성(PublishSingleFile, RuntimeIdentifier 등)은 각 프로젝트의
+       Properties\PublishProfiles\FolderProfile.pubxml 에 있다.
+
+       주의: VS 게시는 pubxml 의 속성만 전역 속성으로 넘기고 pubxml 파일 자체는 임포트하지 않는다.
+       그래서 pubxml 에 적은 Target 은 VS 에서 무시된다. 게시 관련 타깃은 반드시 여기에 둔다.
+
+       게시 흐름:  게시 폴더 초기화 → 빌드/번들 → pdb 제외 → 게시 폴더 복사 → 코드 서명 -->
+
+  <PropertyGroup>
+    <!-- 게시 시 이 프로젝트의 pdb 를 게시 폴더에 복사하지 않는다. (빌드 출력에는 그대로 남는다) -->
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+
+    <!-- 게시 후 코드 서명. 끄려면 -p:BH_SignAfterPublish=false -->
+    <BH_SignAfterPublish Condition="'$(BH_SignAfterPublish)' == ''">true</BH_SignAfterPublish>
+    <!-- 서명 스크립트 위치. 다른 PC 에서는 -p:BH_SignScript=... 로 바꾼다. -->
+    <BH_SignScript Condition="'$(BH_SignScript)' == ''">D:\BH Soft Cert\scripts\Sign-App.ps1</BH_SignScript>
+    <!-- UAC 대화상자에 표시될 이름. 각 csproj 에서 지정하고, 없으면 어셈블리 이름 -->
+    <BH_SignDescription Condition="'$(BH_SignDescription)' == ''">$(AssemblyName)</BH_SignDescription>
+  </PropertyGroup>
+
+  <!-- 게시 폴더를 비운 상태로 시작한다. 폴더가 있으면 통째로 지우고 다시 만든다.
+       SDK 의 증분 정리는 이전 게시 목록에 있던 파일만 지우므로 외부에서 들어온 파일은 남는다. -->
+  <Target Name="BH_CleanPublishDir" BeforeTargets="PrepareForPublish"
+          Condition="'$(PublishDir)' != '' and Exists('$(PublishDir)')">
+    <Message Importance="high" Text="게시 폴더 초기화: $(PublishDir)" />
+    <RemoveDir Directories="$(PublishDir)" />
+    <MakeDir Directories="$(PublishDir)" />
+  </Target>
+
+  <!-- 참조 프로젝트(BH_Install.Core 등)의 pdb 는 ReferenceCopyLocalPaths 경로로 게시 목록에 들어온다.
+       파일 종류를 나누는 단계(_ComputeResolvedFilesToPublishTypes) 직전에 pdb 를 모두 제외해
+       게시 결과가 exe 하나가 되게 한다. -->
+  <Target Name="BH_RemovePdbFromPublish"
+          AfterTargets="ComputeResolvedFilesToPublishList"
+          BeforeTargets="_ComputeResolvedFilesToPublishTypes">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
+
+  <!-- 게시가 끝나면 게시 폴더의 exe/dll 에 코드 서명한다.
+       PFX 암호는 스크립트가 Windows 대화상자로 묻는다 (VS 게시에는 콘솔이 없다).
+       경로·설명은 따옴표 문제를 피하려고 환경 변수로 넘긴다.
+       서명이 실패하거나 취소되면 게시를 오류로 끝내 서명 없는 결과물이 조용히 남지 않게 한다. -->
+  <Target Name="BH_SignPublishedFiles" AfterTargets="Publish"
+          Condition="'$(BH_SignAfterPublish)' == 'true'">
+    <Error Condition="!Exists('$(BH_SignScript)')"
+           Text="코드 서명 스크립트를 찾을 수 없습니다: $(BH_SignScript)  (건너뛰려면 -p:BH_SignAfterPublish=false)" />
+
+    <PropertyGroup>
+      <_BH_PublishDirFull>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(PublishDir)'))</_BH_PublishDirFull>
+    </PropertyGroup>
+
+    <Message Importance="high" Text="코드 서명: $(_BH_PublishDirFull)" />
+
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;&amp; $env:BH_SIGN_SCRIPT -Path $env:BH_SIGN_PATH -Description $env:BH_SIGN_DESC -PromptGui; exit $LASTEXITCODE&quot;"
+          EnvironmentVariables="BH_SIGN_SCRIPT=$(BH_SignScript);BH_SIGN_PATH=$(_BH_PublishDirFull);BH_SIGN_DESC=$(BH_SignDescription)"
+          IgnoreExitCode="true"
+          IgnoreStandardErrorWarningFormat="true"
+          StandardOutputImportance="high"
+          StandardErrorImportance="high">
+      <Output TaskParameter="ExitCode" PropertyName="_BH_SignExitCode" />
+    </Exec>
+
+    <Error Condition="'$(_BH_SignExitCode)' != '0'"
+           Text="코드 서명에 실패했습니다 (exit $(_BH_SignExitCode)). 게시 결과물은 서명되지 않은 상태입니다. 원인은 스크립트 폴더 옆 logs\Sign-App_*.log 의 최신 파일을 보세요." />
+  </Target>
+</Project>

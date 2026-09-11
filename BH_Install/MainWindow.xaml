@@ -1,0 +1,556 @@
+<Window
+    x:Class="BH_Install.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:BH_Install"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="clr-namespace:BH_Install.ViewModels"
+    Title="설치 마법사"
+    Width="808"
+    Height="560"
+    d:DataContext="{d:DesignInstance Type=vm:InstallViewModel}"
+    AllowsTransparency="True"
+    Background="Transparent"
+    FontFamily="Segoe UI, Malgun Gothic"
+    Icon="main_icon.ico"
+    ResizeMode="NoResize"
+    TextOptions.TextFormattingMode="Display"
+    WindowStartupLocation="CenterScreen"
+    WindowStyle="None"
+    mc:Ignorable="d">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </Window.Resources>
+
+    <!--  그림자 여백 포함 루트  -->
+    <Border
+        Margin="12"
+        Background="{StaticResource Brush.WindowBg}"
+        CornerRadius="12">
+        <Border.Effect>
+            <DropShadowEffect
+                BlurRadius="24"
+                Opacity="0.28"
+                ShadowDepth="2" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="230" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!--  ===== 좌측 사이드바 =====  -->
+            <Border
+                Background="{StaticResource Brush.SidebarGradient}"
+                CornerRadius="12,0,0,12"
+                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid Margin="22,26,22,22">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!--  로고 / 프로그램명  -->
+                    <StackPanel>
+                        <Border
+                            Width="48"
+                            Height="48"
+                            HorizontalAlignment="Left"
+                            Background="{StaticResource Brush.AccentGradient}"
+                            CornerRadius="13">
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontSize="18"
+                                FontWeight="Bold"
+                                Foreground="White"
+                                Text="BH" />
+                        </Border>
+                        <TextBlock
+                            Margin="0,14,0,0"
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Foreground="White"
+                            Text="{Binding ProgramName}"
+                            TextWrapping="Wrap" />
+                        <Border
+                            Margin="0,8,0,0"
+                            Padding="8,3"
+                            HorizontalAlignment="Left"
+                            Background="#26FFFFFF"
+                            CornerRadius="10">
+                            <TextBlock
+                                FontSize="11"
+                                Foreground="#C6CEE0"
+                                Text="{Binding VersionChip}" />
+                        </Border>
+                    </StackPanel>
+
+                    <!--  단계 목록  -->
+                    <StackPanel Grid.Row="1" Margin="0,36,0,0">
+                        <Border
+                            x:Name="StepChip0"
+                            Margin="0,0,0,6"
+                            Padding="10,9"
+                            CornerRadius="9">
+                            <StackPanel Orientation="Horizontal">
+                                <Border
+                                    Width="22"
+                                    Height="22"
+                                    Background="#33FFFFFF"
+                                    CornerRadius="11">
+                                    <TextBlock
+                                        x:Name="StepNum0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Foreground="White"
+                                        Text="1" />
+                                </Border>
+                                <TextBlock
+                                    Margin="10,0,0,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="13"
+                                    Foreground="White"
+                                    Text="시작" />
+                            </StackPanel>
+                        </Border>
+                        <Border
+                            x:Name="StepChip1"
+                            Margin="0,0,0,6"
+                            Padding="10,9"
+                            CornerRadius="9">
+                            <StackPanel Orientation="Horizontal">
+                                <Border
+                                    Width="22"
+                                    Height="22"
+                                    Background="#33FFFFFF"
+                                    CornerRadius="11">
+                                    <TextBlock
+                                        x:Name="StepNum1"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Foreground="White"
+                                        Text="2" />
+                                </Border>
+                                <TextBlock
+                                    Margin="10,0,0,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="13"
+                                    Foreground="White"
+                                    Text="라이선스 인증" />
+                            </StackPanel>
+                        </Border>
+                        <Border
+                            x:Name="StepChip2"
+                            Margin="0,0,0,6"
+                            Padding="10,9"
+                            CornerRadius="9">
+                            <StackPanel Orientation="Horizontal">
+                                <Border
+                                    Width="22"
+                                    Height="22"
+                                    Background="#33FFFFFF"
+                                    CornerRadius="11">
+                                    <TextBlock
+                                        x:Name="StepNum2"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Foreground="White"
+                                        Text="3" />
+                                </Border>
+                                <TextBlock
+                                    Margin="10,0,0,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="13"
+                                    Foreground="White"
+                                    Text="설치 진행" />
+                            </StackPanel>
+                        </Border>
+                        <Border
+                            x:Name="StepChip3"
+                            Padding="10,9"
+                            CornerRadius="9">
+                            <StackPanel Orientation="Horizontal">
+                                <Border
+                                    Width="22"
+                                    Height="22"
+                                    Background="#33FFFFFF"
+                                    CornerRadius="11">
+                                    <TextBlock
+                                        x:Name="StepNum3"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Foreground="White"
+                                        Text="4" />
+                                </Border>
+                                <TextBlock
+                                    Margin="10,0,0,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="13"
+                                    Foreground="White"
+                                    Text="완료" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!--  하단 제작자  -->
+                    <TextBlock
+                        Grid.Row="3"
+                        FontSize="11"
+                        Foreground="#6E7A96"
+                        Text="{Binding PublisherFooter}" />
+                </Grid>
+            </Border>
+
+            <!--  ===== 우측 컨텐츠 =====  -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="42" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="72" />
+                </Grid.RowDefinitions>
+
+                <!--  타이틀바  -->
+                <Grid Background="Transparent" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                    <StackPanel
+                        Margin="0,6,10,0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Orientation="Horizontal">
+                        <Button
+                            Click="BtnMinimize_Click"
+                            Content="&#xE921;"
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="10"
+                            Style="{StaticResource Btn.Chrome}" />
+                        <Button
+                            Click="BtnClose_Click"
+                            Content="✕"
+                            Style="{StaticResource Btn.ChromeClose}" />
+                    </StackPanel>
+                </Grid>
+
+                <!--  단계별 화면  -->
+                <Grid Grid.Row="1" Margin="40,4,40,0">
+
+                    <!--  STEP 1 : 시작  -->
+                    <Grid x:Name="Step0">
+                        <Grid.RenderTransform>
+                            <TranslateTransform />
+                        </Grid.RenderTransform>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Text.Title}" Text="설치를 시작합니다" />
+                            <TextBlock
+                                Margin="0,10,0,0"
+                                Style="{StaticResource Text.Subtitle}"
+                                Text="{Binding WelcomeText}" />
+
+                            <Border
+                                Margin="0,26,0,0"
+                                Padding="22,18"
+                                Background="{StaticResource Brush.Card}"
+                                BorderBrush="{StaticResource Brush.Border}"
+                                BorderThickness="1"
+                                CornerRadius="10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="30" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Foreground="{StaticResource Brush.TextTertiary}"
+                                        Text="프로그램" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="13"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource Brush.TextPrimary}"
+                                        Text="{Binding InfoName}" />
+
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Foreground="{StaticResource Brush.TextTertiary}"
+                                        Text="버전" />
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="13"
+                                        Foreground="{StaticResource Brush.TextPrimary}"
+                                        Text="{Binding InfoVersion}" />
+
+                                    <TextBlock
+                                        Grid.Row="2"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Foreground="{StaticResource Brush.TextTertiary}"
+                                        Text="제작자" />
+                                    <TextBlock
+                                        Grid.Row="2"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="13"
+                                        Foreground="{StaticResource Brush.TextPrimary}"
+                                        Text="{Binding InfoPublisher}" />
+
+                                    <TextBlock
+                                        Grid.Row="3"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Foreground="{StaticResource Brush.TextTertiary}"
+                                        Text="설치 경로" />
+                                    <TextBlock
+                                        Grid.Row="3"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="12.5"
+                                        Foreground="{StaticResource Brush.TextSecondary}"
+                                        Text="{Binding InfoRoot}"
+                                        TextTrimming="CharacterEllipsis" />
+
+                                    <TextBlock
+                                        Grid.Row="4"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Foreground="{StaticResource Brush.TextTertiary}"
+                                        Text="데이터 경로" />
+                                    <TextBlock
+                                        Grid.Row="4"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="12.5"
+                                        Foreground="{StaticResource Brush.TextSecondary}"
+                                        Text="{Binding InfoData}"
+                                        TextTrimming="CharacterEllipsis" />
+
+                                    <TextBlock
+                                        Grid.Row="5"
+                                        Margin="0,6,0,0"
+                                        FontSize="12"
+                                        Foreground="{StaticResource Brush.TextTertiary}"
+                                        Text="설명" />
+                                    <TextBlock
+                                        Grid.Row="5"
+                                        Grid.Column="1"
+                                        Margin="0,6,0,0"
+                                        FontSize="13"
+                                        Foreground="{StaticResource Brush.TextSecondary}"
+                                        Text="{Binding InfoDescription}"
+                                        TextWrapping="Wrap" />
+                                </Grid>
+                            </Border>
+
+                            <TextBlock
+                                Margin="0,16,0,0"
+                                Style="{StaticResource Text.Caption}"
+                                Text="설치를 진행하기 전에 실행 중인 다른 프로그램을 모두 종료하는 것이 좋습니다." />
+                        </StackPanel>
+                    </Grid>
+
+                    <!--  STEP 2 : 라이선스 인증  -->
+                    <Grid x:Name="Step1" Visibility="Collapsed">
+                        <Grid.RenderTransform>
+                            <TranslateTransform />
+                        </Grid.RenderTransform>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Text.Title}" Text="라이선스 인증" />
+                            <TextBlock
+                                Margin="0,10,0,0"
+                                Style="{StaticResource Text.Subtitle}"
+                                Text="이 제품은 라이선스 인증이 필요합니다. 발급받은 라이선스 키를 입력하세요." />
+
+                            <Border
+                                Margin="0,26,0,0"
+                                Padding="24,22"
+                                Background="{StaticResource Brush.Card}"
+                                BorderBrush="{StaticResource Brush.Border}"
+                                BorderThickness="1"
+                                CornerRadius="10">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Text.Section}" Text="라이선스 키" />
+                                    <TextBox
+                                        Margin="0,10,0,0"
+                                        CharacterCasing="Upper"
+                                        FontFamily="Consolas"
+                                        FontSize="15"
+                                        MaxLength="29"
+                                        Style="{StaticResource Tb.Modern}"
+                                        Text="{Binding LicenseKey, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Margin="0,10,0,0"
+                                        Style="{StaticResource Text.Caption}"
+                                        Text="형식: XXXXX-XXXXX-XXXXX-XXXXX" />
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock
+                                Margin="0,16,0,0"
+                                Style="{StaticResource Text.Caption}"
+                                Text="라이선스 인증이 필요 없는 제품은 이 단계가 자동으로 건너뛰어집니다."
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!--  STEP 3 : 설치 진행  -->
+                    <Grid x:Name="Step2" Visibility="Collapsed">
+                        <Grid.RenderTransform>
+                            <TranslateTransform />
+                        </Grid.RenderTransform>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Text.Title}" Text="설치하는 중" />
+                                <TextBlock
+                                    Margin="0,10,0,0"
+                                    Style="{StaticResource Text.Subtitle}"
+                                    Text="{Binding StageText}" />
+                            </StackPanel>
+
+                            <TextBlock
+                                Grid.Row="1"
+                                Margin="0,20,0,8"
+                                FontSize="34"
+                                FontWeight="Bold"
+                                Foreground="{StaticResource Brush.Accent}"
+                                Text="{Binding PercentText}" />
+
+                            <ProgressBar
+                                Grid.Row="2"
+                                Maximum="100"
+                                Style="{StaticResource Pb.Modern}"
+                                Value="{Binding Percent, Mode=OneWay}" />
+
+                            <Border
+                                Grid.Row="3"
+                                Margin="0,18,0,4"
+                                Padding="14,10"
+                                Background="{StaticResource Brush.Card}"
+                                BorderBrush="{StaticResource Brush.Border}"
+                                BorderThickness="1"
+                                CornerRadius="10">
+                                <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding Logs}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock
+                                                    Margin="0,2"
+                                                    FontFamily="Consolas"
+                                                    FontSize="11.5"
+                                                    Foreground="{StaticResource Brush.TextSecondary}"
+                                                    Text="{Binding}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+                        </Grid>
+                    </Grid>
+
+                    <!--  STEP 4 : 완료  -->
+                    <Grid x:Name="Step3" Visibility="Collapsed">
+                        <Grid.RenderTransform>
+                            <TranslateTransform />
+                        </Grid.RenderTransform>
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border
+                                Width="76"
+                                Height="76"
+                                HorizontalAlignment="Center"
+                                Background="{StaticResource Brush.SuccessSoft}"
+                                CornerRadius="38">
+                                <Path
+                                    Data="M20,39 L33,52 L57,26"
+                                    Stroke="{StaticResource Brush.Success}"
+                                    StrokeEndLineCap="Round"
+                                    StrokeStartLineCap="Round"
+                                    StrokeThickness="5" />
+                            </Border>
+                            <TextBlock
+                                Margin="0,22,0,0"
+                                HorizontalAlignment="Center"
+                                Style="{StaticResource Text.Title}"
+                                Text="설치가 완료되었습니다" />
+                            <TextBlock
+                                Margin="0,10,0,0"
+                                HorizontalAlignment="Center"
+                                Style="{StaticResource Text.Subtitle}"
+                                Text="{Binding DoneSubText}" />
+                            <CheckBox
+                                Margin="0,26,0,0"
+                                HorizontalAlignment="Center"
+                                Content="{Binding RunNowLabel}"
+                                IsChecked="{Binding RunNow}"
+                                Style="{StaticResource Chk.Modern}" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+
+                <!--  하단 버튼 바  -->
+                <Border
+                    Grid.Row="2"
+                    BorderBrush="{StaticResource Brush.Border}"
+                    BorderThickness="0,1,0,0">
+                    <Grid Margin="40,0">
+                        <Button
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Command="{Binding CancelCommand}"
+                            Content="취소"
+                            Style="{StaticResource Btn.Secondary}"
+                            Visibility="{Binding IsCancelVisible, Converter={StaticResource BoolToVis}}" />
+                        <StackPanel
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                            <Button
+                                Margin="0,0,10,0"
+                                Command="{Binding BackCommand}"
+                                Content="〈  이전"
+                                Style="{StaticResource Btn.Secondary}"
+                                Visibility="{Binding IsBackVisible, Converter={StaticResource BoolToVis}}" />
+                            <Button
+                                MinWidth="110"
+                                Command="{Binding NextCommand}"
+                                Content="{Binding NextLabel}"
+                                IsEnabled="{Binding IsNextEnabled}"
+                                Style="{StaticResource Btn.Primary}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

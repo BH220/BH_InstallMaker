@@ -1,0 +1,28 @@
+BH_Install.Core 이 프로젝트는 공통 프로젝트로써 
+모듈에 모두 포함시킨다. 
+
+모듈은 개별적으로 실행파일이지만 빌드를 하지 않는다. 
+
+실제로 각가 프로그램이 최종 게시물을 준비하고 
+
+
+BH_InstallerMaker 프로젝트에서 
+최종 게시물들을 선택한 뒤에 
+필요한 설정을 하고 인스톨러 만들기를 누르면 
+
+설치 프로그램,
+삭제 프로그램, 
+런처 프로그램, 
+웹에 배포할 패키지
+가 한번에 나오는 구조로 이루어져 있다.
+
+
+모든 프로젝트의 csproj 파일에 아래와 같은 내용이 들어가야 한다.
+<Project Sdk="Microsoft.NET.Sdk.Web">
+	<PropertyGroup>
+		<AppVersion>1.0.0.1</AppVersion>
+		<AssemblyVersion>$(AppVersion)</AssemblyVersion>
+		<FileVersion>$(AppVersion)</FileVersion>
+		<InformationalVersion>$(AppVersion)</InformationalVersion>
+
+	</PropertyGroup>

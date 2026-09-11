@@ -1,0 +1,128 @@
+<Window
+    x:Class="BH_Launcher.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:BH_Launcher"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="clr-namespace:BH_Launcher.ViewModels"
+    Title="런처"
+    Width="384"
+    Height="180"
+    d:DataContext="{d:DesignInstance Type=vm:LauncherViewModel}"
+    AllowsTransparency="True"
+    Background="Transparent"
+    FontFamily="Segoe UI, Malgun Gothic"
+    Icon="main_icon.ico"
+    ResizeMode="NoResize"
+    TextOptions.TextFormattingMode="Display"
+    WindowStartupLocation="CenterScreen"
+    WindowStyle="None"
+    mc:Ignorable="d">
+
+    <Border
+        Margin="12"
+        Background="{StaticResource Brush.Card}"
+        BorderBrush="{StaticResource Brush.Border}"
+        BorderThickness="1"
+        CornerRadius="12"
+        MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+        <Border.Effect>
+            <DropShadowEffect
+                BlurRadius="22"
+                Opacity="0.22"
+                ShadowDepth="2" />
+        </Border.Effect>
+
+        <Grid Margin="18,13,18,14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!--  상단: 로고 + 이름 + 버전 + 닫기  -->
+            <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border
+                    Width="28"
+                    Height="28"
+                    Background="{StaticResource Brush.Accent}"
+                    CornerRadius="8">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        FontWeight="Bold"
+                        Foreground="White"
+                        Text="BH" />
+                </Border>
+                <TextBlock
+                    Grid.Column="1"
+                    Margin="10,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="13"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource Brush.TextPrimary}"
+                    Text="{Binding ProgramName}" />
+                <TextBlock
+                    Grid.Column="2"
+                    Margin="0,0,6,0"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="{StaticResource Brush.TextTertiary}"
+                    Text="{Binding VersionText}" />
+                <Button
+                    Grid.Column="3"
+                    Width="26"
+                    Height="22"
+                    VerticalAlignment="Center"
+                    Click="BtnClose_Click"
+                    Content="✕"
+                    FontSize="11"
+                    Style="{StaticResource Btn.Chrome}" />
+            </Grid>
+
+            <!--  상태  -->
+            <TextBlock
+                Grid.Row="2"
+                Margin="0,10,0,0"
+                FontSize="12"
+                Foreground="{StaticResource Brush.TextSecondary}"
+                Text="{Binding StatusText}" />
+
+            <!--  진행바  -->
+            <ProgressBar
+                Grid.Row="3"
+                Height="6"
+                Margin="0,7,0,0"
+                Foreground="{StaticResource Brush.Accent}"
+                Maximum="100"
+                Style="{StaticResource Pb.Modern}"
+                Value="{Binding Percent, Mode=OneWay}" />
+
+            <!--  하단: 용량 + 퍼센트  -->
+            <Grid Grid.Row="4" Margin="0,7,0,5">
+                <TextBlock
+                    HorizontalAlignment="Left"
+                    FontSize="11"
+                    Foreground="{StaticResource Brush.TextTertiary}"
+                    Text="{Binding DetailText}" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    FontSize="11.5"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource Brush.TextPrimary}"
+                    Text="{Binding PercentText}" />
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

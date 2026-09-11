@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>main_icon.ico</ApplicationIcon>
+    <!-- 관리자 권한 요구. 루트 인증서 설치와 HKLM 등록에 필요하다. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 코드 서명 시 UAC 대화상자에 표시될 이름 -->
+    <BH_SignDescription>BH Soft Installer</BH_SignDescription>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BH_Install.Core\BH_Install.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="main_icon.ico" />
+  </ItemGroup>
+
+  <!-- 게시 폴더 초기화, pdb 제외, 게시 후 코드 서명 등 공용 게시 규칙 -->
+  <Import Project="..\BH.Publish.targets" />
+
+</Project>

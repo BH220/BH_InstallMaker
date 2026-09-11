@@ -1,0 +1,32 @@
+루트 CA 인증서 설치 방법
+
+	다른 PC에서 처음부터 하는 순서를 안내한다.
+	
+	1. 폴더 복사
+		D:\BH Soft Cert 전체(cert, scripts)를 새 PC의 같은 경로 둔다. 
+		경로가 달라지면 BH.Publish.targets의 BH_SignScript 기본값과 어긋나므로 게시 때 -p:BH_SignScript=경로를 주거나 기본값을 고쳐야 한다
+		-> 이 폴더는 구글킵 "BH Soft 코드 사인 인증서"에서 다운로드할 수 있다.
+		
+	2. 루트 CA 개인키 가져오기 (CurrentUser\My)
+		
+		$pw = Read-Host -AsSecureString '루트 PFX 암호'
+		Import-PfxCertificate -FilePath "D:\BH Soft Cert\cert\BHSoft-RootCA.pfx" -CertStoreLocation Cert:\CurrentUser\My -Password $pw
+		
+		# HasPrivateKey 가 True 여야 발급 스크립트가 루트를 찾는다
+		Get-Item Cert:\CurrentUser\My\B76D28A1515FD8D18C77EE60625CB085A3BBEEF9 | Select-Object Subject, HasPrivateKey
+	
+	3. 코드 서명 인증서 발급
+		& "D:\BH Soft Cert\scripts\New-CodeSigningCert.ps1" -PfxPassword '<비밀번호>' -Force
+		새 리프가 CurrentUser\My에 만들어지고 cert\BHSoft-CodeSigning.pfx, .cer, info.txt가 새로 생성되며, 지문도 변경된다.
+
+
+
+코드 서명용 인증서 갱신 방법
+
+	1. 위의 루트 CA인증서 설치 방법을 따라 루트 CA 인증서를 설치한다.
+
+	2. 코드 서명 인증서 발급 스크립트를 실행한다.
+		"&D:\BH Soft Cert\scripts\New-CodeSigningCert.ps1" -PfxPassword '<비밀번호>' -Force"
+		이걸 파워쉘에서 실행한다.
+
+		

@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <!-- 루트 CA 공개키를 어셈블리에 내장한다.
+       별도 파일로 배포하지 않으므로 배포 중 누락이나 교체 위험이 없다.
+       LogicalName 은 CertificateInstaller.RootCertResourceName 과 일치해야 한다. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\BHSoft-RootCA.cer"
+                      LogicalName="BH_Install.Core.Resources.BHSoft_RootCA.cer" />
+  </ItemGroup>
+
+</Project>
