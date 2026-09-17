@@ -34,6 +34,7 @@ namespace BH_Install.Core
             key.SetValue("InstallPath", m.RootPath);
             key.SetValue("DataPath", m.DataRootPath);
             key.SetValue("MainExe", m.MainExe);
+            key.SetValue("UpdateUrl", m.UpdateUrl);
             key.SetValue("Launcher", launcherPath);
             key.SetValue("InstallDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
         }

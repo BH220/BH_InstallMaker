@@ -16,6 +16,7 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +25,13 @@
 
   <ItemGroup>
     <Resource Include="main_icon.ico" />
+  </ItemGroup>
+
+  <!-- 설치 화면 좌상단 로고에 쓰는 대상 프로그램 아이콘. 메이커가 -p:BH_ProgramIcon=<대상 .ico> 로 넘길 때만 들어간다.
+       없으면(VS 게시, F5) 코드가 main_icon.ico 로 대체한다. 같은 파일을 두 항목으로 넣으면 리소스 이름이 충돌하므로 기본값을 두지 않는다.
+       설치 exe 자체의 아이콘(ApplicationIcon)은 main_icon.ico 그대로다. -->
+  <ItemGroup Condition="'$(BH_ProgramIcon)' != ''">
+    <Resource Include="$(BH_ProgramIcon)" Link="program_icon.ico" />
   </ItemGroup>
 
   <!-- 메이커가 게시할 때 서명된 런처·언인스톨 exe 를 페이로드로 임베드한다.

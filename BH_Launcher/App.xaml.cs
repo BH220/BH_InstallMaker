@@ -32,6 +32,8 @@ namespace BH_Launcher
 
             Console.WriteLine("[System] Program Start");
 
+            //라이선스를 확인하여 복사본인지 체크한다
+
             // MainWindow 설정 및 수동 Show
             var view = Services.GetRequiredService<MainView>();
             ShowWindow(view);

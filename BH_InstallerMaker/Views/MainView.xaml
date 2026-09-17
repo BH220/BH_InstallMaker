@@ -226,6 +226,13 @@
                                     TextWrapping="Wrap"
                                     VerticalScrollBarVisibility="Auto" />
 
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="업데이트 서버 주소 (런처가 업데이트 목록·파일을 조회하는 URL)" />
+                                <TextBox Style="{StaticResource Tb.Modern}" Text="{Binding UpdateUrl, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock
+                                    Margin="0,6,0,0"
+                                    Style="{StaticResource Text.Caption}"
+                                    Text="예: https://update.bhsoft.co.kr/myapp/   프로그램마다 다른 값이며 매니페스트에 담겨 런처로 전달됩니다."
+                                    TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
 

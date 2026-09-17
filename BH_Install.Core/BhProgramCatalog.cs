@@ -4,6 +4,7 @@
     //값이 곧 DB 의 번호이므로 바꾸면 안 된다.
     public enum BhProgramId
     {
+        BhSoft = 1,
         SecurityCode = 2,
         CarLog = 3,
         Commander = 4,

@@ -13,7 +13,7 @@
     AllowsTransparency="True"
     Background="Transparent"
     FontFamily="Segoe UI, Malgun Gothic"
-    Icon="/main_icon.ico"
+    Icon="pack://application:,,,/BH_Install;component/main_icon.ico"
     ResizeMode="NoResize"
     TextOptions.TextFormattingMode="Display"
     WindowStartupLocation="CenterScreen"
@@ -57,19 +57,29 @@
 
                     <!--  로고 / 프로그램명  -->
                     <StackPanel>
+                        <!--  대상 프로그램의 exe 아이콘(program_icon.ico 리소스). 코드에서 크기에 맞는 프레임을 넣는다  -->
                         <Border
                             Width="48"
                             Height="48"
                             HorizontalAlignment="Left"
                             Background="{StaticResource Brush.AccentGradient}"
                             CornerRadius="13">
-                            <TextBlock
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                FontSize="18"
-                                FontWeight="Bold"
-                                Foreground="White"
-                                Text="BH" />
+                            <Grid>
+                                <Image
+                                    x:Name="LogoImage"
+                                    Margin="6"
+                                    RenderOptions.BitmapScalingMode="HighQuality"
+                                    Stretch="Uniform" />
+                                <TextBlock
+                                    x:Name="LogoText"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontSize="18"
+                                    FontWeight="Bold"
+                                    Foreground="White"
+                                    Text="BH"
+                                    Visibility="Collapsed" />
+                            </Grid>
                         </Border>
                         <TextBlock
                             Margin="0,14,0,0"
@@ -146,7 +156,7 @@
                                     VerticalAlignment="Center"
                                     FontSize="13"
                                     Foreground="White"
-                                    Text="라이선스 인증" />
+                                    Text="사용권 계약" />
                             </StackPanel>
                         </Border>
                         <Border
@@ -174,11 +184,12 @@
                                     VerticalAlignment="Center"
                                     FontSize="13"
                                     Foreground="White"
-                                    Text="설치 진행" />
+                                    Text="라이선스 인증" />
                             </StackPanel>
                         </Border>
                         <Border
                             x:Name="StepChip3"
+                            Margin="0,0,0,6"
                             Padding="10,9"
                             CornerRadius="9">
                             <StackPanel Orientation="Horizontal">
@@ -195,6 +206,33 @@
                                         FontWeight="SemiBold"
                                         Foreground="White"
                                         Text="4" />
+                                </Border>
+                                <TextBlock
+                                    Margin="10,0,0,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="13"
+                                    Foreground="White"
+                                    Text="설치 진행" />
+                            </StackPanel>
+                        </Border>
+                        <Border
+                            x:Name="StepChip4"
+                            Padding="10,9"
+                            CornerRadius="9">
+                            <StackPanel Orientation="Horizontal">
+                                <Border
+                                    Width="22"
+                                    Height="22"
+                                    Background="#33FFFFFF"
+                                    CornerRadius="11">
+                                    <TextBlock
+                                        x:Name="StepNum4"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Foreground="White"
+                                        Text="5" />
                                 </Border>
                                 <TextBlock
                                     Margin="10,0,0,0"
@@ -350,7 +388,7 @@
                                         Text="{Binding InfoData}"
                                         TextTrimming="CharacterEllipsis" />
 
-                                    <TextBlock
+                                    <!--<TextBlock
                                         Grid.Row="5"
                                         Margin="0,6,0,0"
                                         FontSize="12"
@@ -363,7 +401,7 @@
                                         FontSize="13"
                                         Foreground="{StaticResource Brush.TextSecondary}"
                                         Text="{Binding InfoDescription}"
-                                        TextWrapping="Wrap" />
+                                        TextWrapping="Wrap" />-->
                                 </Grid>
                             </Border>
 
@@ -374,8 +412,57 @@
                         </StackPanel>
                     </Grid>
 
-                    <!--  STEP 2 : 라이선스 인증  -->
+                    <!--  STEP 2 : 사용권 계약  -->
                     <Grid x:Name="Step1" Visibility="Collapsed">
+                        <Grid.RenderTransform>
+                            <TranslateTransform />
+                        </Grid.RenderTransform>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Style="{StaticResource Text.Title}" Text="사용권 계약" />
+                            <TextBlock
+                                Grid.Row="1"
+                                Margin="0,10,0,0"
+                                Style="{StaticResource Text.Subtitle}"
+                                Text="설치를 계속하려면 아래 사용권 계약을 끝까지 읽고 동의해야 합니다." />
+
+                            <!--  계약 본문: 읽기 전용, 세로 스크롤  -->
+                            <Border
+                                Grid.Row="2"
+                                Margin="0,20,0,0"
+                                Background="{StaticResource Brush.Card}"
+                                BorderBrush="{StaticResource Brush.Border}"
+                                BorderThickness="1"
+                                CornerRadius="10">
+                                <TextBox
+                                    Padding="18,14"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    FontSize="12.5"
+                                    Foreground="{StaticResource Brush.TextPrimary}"
+                                    IsReadOnly="True"
+                                    IsReadOnlyCaretVisible="False"
+                                    Text="{Binding EulaText, Mode=OneWay}"
+                                    TextWrapping="Wrap"
+                                    VerticalScrollBarVisibility="Visible" />
+                            </Border>
+
+                            <!--  동의해야 [다음] 이 켜진다  -->
+                            <CheckBox
+                                Grid.Row="3"
+                                Margin="0,16,0,0"
+                                Content="사용권 계약의 내용을 모두 읽었으며 이에 동의합니다."
+                                IsChecked="{Binding EulaAccepted}"
+                                Style="{StaticResource Chk.Modern}" />
+                        </Grid>
+                    </Grid>
+                    <!--  STEP 3 : 라이선스 인증  -->
+                    <Grid x:Name="Step2" Visibility="Collapsed">
                         <Grid.RenderTransform>
                             <TranslateTransform />
                         </Grid.RenderTransform>
@@ -395,31 +482,54 @@
                                 CornerRadius="10">
                                 <StackPanel>
                                     <TextBlock Style="{StaticResource Text.Section}" Text="라이선스 키" />
+                                    <!--
+                                        영문·숫자만 입력받고 4자마다 하이픈을 자동으로 넣어 XXXX-XXXX-XXXX 로 표시한다.
+                                        하이픈은 표시용이며 실제 값(LicenseKeyRaw)에서는 제거된다.
+                                        한글 IME 는 끄고, 그 밖의 문자는 입력 단계에서 막는다. 붙여넣기는 영문·숫자만 남긴다.
+                                    -->
                                     <TextBox
+                                        x:Name="LicenseKeyBox"
                                         Margin="0,10,0,0"
                                         CharacterCasing="Upper"
+                                        DataObject.Pasting="LicenseKeyBox_Pasting"
                                         FontFamily="Consolas"
                                         FontSize="15"
-                                        MaxLength="29"
+                                        InputMethod.IsInputMethodEnabled="False"
+                                        MaxLength="14"
+                                        PreviewKeyDown="LicenseKeyBox_PreviewKeyDown"
+                                        PreviewTextInput="LicenseKeyBox_PreviewTextInput"
                                         Style="{StaticResource Tb.Modern}"
-                                        Text="{Binding LicenseKey, UpdateSourceTrigger=PropertyChanged}" />
+                                        Text="{Binding LicenseKey, UpdateSourceTrigger=PropertyChanged}"
+                                        TextChanged="LicenseKeyBox_TextChanged" />
                                     <TextBlock
                                         Margin="0,10,0,0"
                                         Style="{StaticResource Text.Caption}"
-                                        Text="형식: XXXXX-XXXXX-XXXXX-XXXXX" />
+                                        Text="형식: XXXX-XXXX-XXXX  (영문·숫자만 입력, 하이픈은 자동으로 들어갑니다)" />
+                                    <!--  허용되지 않는 문자를 입력하면 나오는 안내. 비어 있으면 숨긴다  -->
+                                    <TextBlock
+                                        Margin="0,6,0,0"
+                                        FontSize="11.5"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource Brush.Danger}"
+                                        Text="{Binding LicenseKeyError}"
+                                        TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding LicenseKeyError}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </StackPanel>
                             </Border>
-
-                            <TextBlock
-                                Margin="0,16,0,0"
-                                Style="{StaticResource Text.Caption}"
-                                Text="라이선스 인증이 필요 없는 제품은 이 단계가 자동으로 건너뛰어집니다."
-                                TextWrapping="Wrap" />
                         </StackPanel>
                     </Grid>
 
-                    <!--  STEP 3 : 설치 진행  -->
-                    <Grid x:Name="Step2" Visibility="Collapsed">
+                    <!--  STEP 4 : 설치 진행  -->
+                    <Grid x:Name="Step3" Visibility="Collapsed">
                         <Grid.RenderTransform>
                             <TranslateTransform />
                         </Grid.RenderTransform>
@@ -479,8 +589,8 @@
                         </Grid>
                     </Grid>
 
-                    <!--  STEP 4 : 완료  -->
-                    <Grid x:Name="Step3" Visibility="Collapsed">
+                    <!--  STEP 5 : 완료  -->
+                    <Grid x:Name="Step4" Visibility="Collapsed">
                         <Grid.RenderTransform>
                             <TranslateTransform />
                         </Grid.RenderTransform>

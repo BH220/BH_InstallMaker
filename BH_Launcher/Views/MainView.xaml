@@ -13,7 +13,7 @@
     AllowsTransparency="True"
     Background="Transparent"
     FontFamily="Segoe UI, Malgun Gothic"
-    Icon="/main_icon.ico"
+    Icon="pack://application:,,,/BH_Launcher;component/main_icon.ico"
     ResizeMode="NoResize"
     TextOptions.TextFormattingMode="Display"
     WindowStartupLocation="CenterScreen"
@@ -52,18 +52,28 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+                <!--  대상 프로그램의 exe 아이콘(main_icon.ico 리소스, 게시 시 대상 아이콘으로 교체됨)  -->
                 <Border
                     Width="28"
                     Height="28"
                     Background="{StaticResource Brush.Accent}"
                     CornerRadius="8">
-                    <TextBlock
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        FontSize="11"
-                        FontWeight="Bold"
-                        Foreground="White"
-                        Text="BH" />
+                    <Grid>
+                        <Image
+                            x:Name="LogoImage"
+                            Margin="3"
+                            RenderOptions.BitmapScalingMode="HighQuality"
+                            Stretch="Uniform" />
+                        <TextBlock
+                            x:Name="LogoText"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            FontWeight="Bold"
+                            Foreground="White"
+                            Text="BH"
+                            Visibility="Collapsed" />
+                    </Grid>
                 </Border>
                 <TextBlock
                     Grid.Column="1"

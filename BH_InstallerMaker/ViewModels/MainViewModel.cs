@@ -16,13 +16,12 @@ namespace BH_InstallerMaker.ViewModels
         {
             nameof(Name), nameof(Version), nameof(Publisher), nameof(Description),
             nameof(RootPath), nameof(DataRootPath), nameof(RegistryKey),
-            nameof(MainExe), nameof(SelectedProgram),
+            nameof(MainExe), nameof(UpdateUrl), nameof(SelectedProgram),
         };
 
         private readonly IFileDialogService _dialogs;
         private readonly ProjectService _projects;
         private readonly SettingsService _settings;
-        private readonly InstallerProjectService _installerProjects;
         private readonly ModuleBuilder _modules;
 
         private string? _projectDir;
@@ -34,14 +33,11 @@ namespace BH_InstallerMaker.ViewModels
         private bool _loadingSettings;
         private bool _loadingProject;
 
-        public MainViewModel(
-            IFileDialogService dialogs, ProjectService projects, SettingsService settings,
-            InstallerProjectService installerProjects, ModuleBuilder modules)
+        public MainViewModel(IFileDialogService dialogs, ProjectService projects, SettingsService settings, ModuleBuilder modules)
         {
             _dialogs = dialogs;
             _projects = projects;
             _settings = settings;
-            _installerProjects = installerProjects;
             _modules = modules;
 
             LoadSettings();
@@ -71,6 +67,10 @@ namespace BH_InstallerMaker.ViewModels
         //런처가 실행할 대상 프로그램의 exe. csproj 의 AssemblyName 에서 자동으로 정해지며 화면에 노출하지 않는다.
         [ObservableProperty]
         private string mainExe = "";
+
+        //런처가 업데이트 목록·파일을 조회하는 서버 주소 (프로그램마다 다름, 설정 파일에 저장)
+        [ObservableProperty]
+        private string updateUrl = "";
 
         // ===== 설치 경로 =====
         [ObservableProperty]
@@ -138,17 +138,13 @@ namespace BH_InstallerMaker.ViewModels
 
             try
             {
-                ProjectInfo info = _projects.Read(path);
-                ProgramModel? saved = _installerProjects.Load(path);
+                ProjectInfo info = _projects.Read(path); 
                 _iconPath = info.IconPath;
 
                 _loadingProject = true;
                 try
                 {
-                    if (saved is not null)
-                        ApplyModel(saved);
-                    else
-                        ApplyDefaults(info);
+                     ApplyDefaults(info);
 
                     //버전과 메인 실행 파일은 항상 csproj 에서 정한다
                     Version = info.Version;
@@ -157,16 +153,10 @@ namespace BH_InstallerMaker.ViewModels
                 finally
                 {
                     _loadingProject = false;
-                }
-
-                //새 프로젝트면 설정 파일을 바로 만들어 둔다
-                SaveProjectIfLoaded();
-
-                string settingsNote = saved is not null
-                    ? $"설정 파일 로드: {Path.GetFileName(InstallerProjectService.GetPath(path))}"
-                    : $"새 설정 파일 생성: {Path.GetFileName(InstallerProjectService.GetPath(path))}";
+                } 
+                 
                 string iconNote = info.IconPath is null ? "아이콘: 없음(런처 기본 아이콘)" : $"아이콘: {Path.GetFileName(info.IconPath)}";
-                ProjectSummary = $"프로젝트: {info.Stem}  ·  {info.TargetFramework}  ·  메인 파일: {info.MainExeName}  ·  {iconNote}\n{settingsNote}";
+                ProjectSummary = $"프로젝트: {info.Stem}  ·  {info.TargetFramework}  ·  메인 파일: {info.MainExeName}  ·  {iconNote}";
                 StatusText = "배포할 프로젝트가 준비되었습니다.";
             }
             catch (Exception ex)
@@ -200,7 +190,7 @@ namespace BH_InstallerMaker.ViewModels
             if (model is null)
                 return;
 
-            SaveProjectIfLoaded();
+            ProgramManifest.Instance.SaveToModel(model);
 
             IsBuilding = true;
             BuildButtonText = "빌드 중...";
@@ -227,10 +217,7 @@ namespace BH_InstallerMaker.ViewModels
 
         protected override void OnPropertyChanged(PropertyChangedEventArgs e)
         {
-            base.OnPropertyChanged(e);
-
-            if (e.PropertyName is not null && ProjectFields.Contains(e.PropertyName))
-                SaveProjectIfLoaded();
+            base.OnPropertyChanged(e); 
         }
 
         partial void OnPfxPathChanged(string value)
@@ -320,21 +307,6 @@ namespace BH_InstallerMaker.ViewModels
             });
         }
 
-        private void SaveProjectIfLoaded()
-        {
-            if (_loadingProject || string.IsNullOrWhiteSpace(ProjectPath))
-                return;
-
-            try
-            {
-                _installerProjects.Save(ProjectPath, BuildModel());
-            }
-            catch (Exception ex)
-            {
-                StatusText = $"설정 파일 저장 실패: {ex.Message}";
-            }
-        }
-
         //저장된 설정을 화면에 적용
         private void ApplyModel(ProgramModel m)
         {
@@ -345,7 +317,8 @@ namespace BH_InstallerMaker.ViewModels
             RootPath = m.RootPath;
             DataRootPath = m.DataRootPath;
             RegistryKey = m.RegistryKey;
-            SelectedProgram = BhProgramCatalog.Find(m.ProgramId);
+            UpdateUrl = m.UpdateUrl;
+            SelectedProgram = BhProgramCatalog.Find((int)m.ProgramId);
         }
 
         //처음 선택한 프로젝트의 기본값
@@ -360,6 +333,7 @@ namespace BH_InstallerMaker.ViewModels
             DataRootPath = $@"C:\ProgramData\{Publisher}\{Name}";
             RegistryKey = $@"SOFTWARE\{Publisher}\{Name}";
 
+            UpdateUrl = "";
             SelectedProgram = null;
         }
 
@@ -508,7 +482,8 @@ namespace BH_InstallerMaker.ViewModels
             DataRootPath = DataRootPath.Trim(),
             RegistryKey = RegistryKey.Trim(),
             MainExe = MainExe.Trim(),
-            ProgramId = SelectedProgram?.Number ?? 0,
+            UpdateUrl = UpdateUrl.Trim(),
+            ProgramId = SelectedProgram != null ? 0 : 0,
         };
 
         //빌드 전 검증. 문제가 있으면 상태 문구를 바꾸고 null.
@@ -543,6 +518,12 @@ namespace BH_InstallerMaker.ViewModels
             if (SelectedProgram is null)
             {
                 StatusText = "배포 소스에서 프로그램(라이선스 DB)을 선택하세요.";
+                return null;
+            }
+            if (!Uri.TryCreate(UpdateUrl.Trim(), UriKind.Absolute, out Uri? updateUri)
+                || (updateUri.Scheme != Uri.UriSchemeHttp && updateUri.Scheme != Uri.UriSchemeHttps))
+            {
+                StatusText = "업데이트 서버 주소를 http:// 또는 https:// 로 시작하는 전체 주소로 입력하세요.";
                 return null;
             }
             if (!IsCertValid)

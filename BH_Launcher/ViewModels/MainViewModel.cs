@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Windows;
 using System.IO;
 using BH_Install.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -7,8 +8,9 @@ namespace BH_Launcher.ViewModels
 {
     public partial class MainViewModel : ObservableObject
     {
-        // 메이커가 임베드한 매니페스트. 없으면(F5 디버깅) 더미 화면.
-        private readonly ProgramModel? _model;
+        // 메이커가 빌드 직전에 BH_Install.Core 의 ProgramModel.json 에 저장한 매니페스트.
+        // 비어 있으면(F5, 빈 ProgramModel.json) 설치 안내 후 종료한다.
+        private readonly ProgramModel _model = ProgramManifest.Instance.ProgramModel;
 
         //더미 업데이트 파일 목록 (이름, 크기 MB). 업데이트 서버 연동 전까지의 자리표시자다.
         private sealed record DummyFile(string Name, double SizeMb);
@@ -44,13 +46,32 @@ namespace BH_Launcher.ViewModels
 
         public MainViewModel()
         {
-            _model = ProgramManifest.LoadEmbedded();
-            if (_model is not null)
+            if (!ProgramManifest.Instance.IsLoaded)
             {
-                ProgramName = _model.Name;
-                VersionText = $"v{_model.Version}";
+                MessageBox.Show("정상 설치 후 실행해 주세요.", ProgramName, MessageBoxButton.OK, MessageBoxImage.Error);
+                Environment.Exit(1);
             }
+
+            ProgramName = _model.Name;
+            VersionText = $"v{_model.Version}";
+
+            //설치 프로그램이 HKLM\{RegistryKey}\license 에 남긴 값을 ProgramId 와 맞춰본다. 틀리면 안내 후 종료.
+            if (!LocalLicenseChecker.Instance.IsLicenseValid(_model.ProgramId, _model.RegistryKey, out string licenseError))
+            {
+                MessageBox.Show(licenseError, ProgramName, MessageBoxButton.OK, MessageBoxImage.Error);
+                Environment.Exit(1);
+            }
+
+            //메이커에서 지정한 업데이트 서버 주소. 업데이트 목록 조회·파일 다운로드의 기준 URL 이다.
+            UpdateUrl = _model.UpdateUrl ?? string.Empty;
+            _updateHost = Uri.TryCreate(UpdateUrl, UriKind.Absolute, out Uri? u) ? u.Host : "서버";
         }
+
+        //업데이트 서버 주소 (매니페스트 UpdateUrl)
+        public string UpdateUrl { get; }
+
+        //상태 문구에 보여줄 서버 호스트 이름
+        private readonly string _updateHost;
 
         //업데이트 완료 후 실제 프로그램 실행 요청
         public event EventHandler? LaunchRequested;
@@ -64,7 +85,7 @@ namespace BH_Launcher.ViewModels
             // 1) 업데이트 확인 (더미 - 업데이트 리스트 연동 예정)
             for (int i = 0; i < 20; i++)
             {
-                StatusText = "서버에서 업데이트 확인 중" + new string('.', i % 3 + 1);
+                StatusText = $"{_updateHost}에서 업데이트 확인 중" + new string('.', i % 3 + 1);
                 await Task.Delay(80);
             }
 
@@ -91,7 +112,7 @@ namespace BH_Launcher.ViewModels
             PercentText = "100%";
             DetailText = $"{_totalMb:0.0} / {_totalMb:0.0} MB";
             StatusText = "최신 버전입니다. 잠시 후 프로그램을 시작합니다...";
-            VersionText = _model is null ? "v1.3.1" : $"v{_model.Version}";
+            VersionText = $"v{_model.Version}";
 
             await Task.Delay(1500);
             LaunchRequested?.Invoke(this, EventArgs.Empty);
@@ -101,12 +122,6 @@ namespace BH_Launcher.ViewModels
         // 실패하면 false 와 사용자에게 보여줄 문구를 돌려준다.
         public bool TryLaunchProgram(out string message)
         {
-            if (_model is null)
-            {
-                message = "매니페스트가 없습니다. 여기서 실제 프로그램을 실행합니다. (미리보기)";
-                return false;
-            }
-
             if (string.IsNullOrWhiteSpace(_model.MainExe))
             {
                 message = "실행할 메인 프로그램이 지정되지 않았습니다.";

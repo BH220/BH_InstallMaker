@@ -22,7 +22,6 @@ namespace BH_InstallerMaker
             services.AddSingleton<IFileDialogService, FileDialogService>();
             services.AddSingleton<ProjectService>();
             services.AddSingleton<SettingsService>();
-            services.AddSingleton<InstallerProjectService>();
             services.AddSingleton<ModuleBuilder>();
             services.AddSingleton<IMessenger>(new WeakReferenceMessenger());
 

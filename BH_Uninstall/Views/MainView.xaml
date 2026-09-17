@@ -13,7 +13,7 @@
     AllowsTransparency="True"
     Background="Transparent"
     FontFamily="Segoe UI, Malgun Gothic"
-    Icon="/_0049_Trash.ico"
+    Icon="pack://application:,,,/BH_Uninstall;component/_0049_Trash.ico"
     ResizeMode="NoResize"
     TextOptions.TextFormattingMode="Display"
     WindowStartupLocation="CenterScreen"

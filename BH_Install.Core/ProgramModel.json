@@ -1,0 +1,13 @@
+{
+  "Name": "BH Vpn Browser",
+  "Publisher": "BH Soft",
+  "Version": "3.0.9.10",
+  "Description": "",
+  "RootPath": "C:\\Program Files\\BH Soft\\BH Vpn Browser",
+  "DataRootPath": "C:\\ProgramData\\BH Soft\\BH Vpn Browser",
+  "RegistryKey": "SOFTWARE\\BH Soft\\BH Vpn Browser",
+  "MainExe": "BH_VpnBrowser.exe",
+  "UpdateUrl": "https://vb.bhsoft.co.kr/",
+  "MainIcon": "",
+  "ProgramId": 0
+}

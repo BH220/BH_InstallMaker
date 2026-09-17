@@ -1,25 +1,30 @@
-﻿using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
-using System.Windows;
-using System.Windows.Threading;
-using BH_Install.Core;
+﻿using BH_Install.Core;
+using BH_Install.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Newtonsoft.Json;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.Text.RegularExpressions;
+using System.Net;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Threading;
 
 namespace BH_Install.ViewModels
 {
     public partial class MainViewModel : ObservableObject
     {
         public const int StepWelcome = 0;
-        public const int StepLicense = 1;
-        public const int StepProgress = 2;
-        public const int StepDone = 3;
-
-        // 메이커가 게시할 때 임베드한 매니페스트. 없으면(F5 디버깅) 더미 값으로 화면만 보여주고
-        // 파일 복사·레지스트리 같은 실제 작업은 하지 않는다(미리보기 모드).
-        private readonly ProgramModel _model;
-        private readonly bool _isReal;
+        public const int StepEula = 1;
+        public const int StepLicense = 2;
+        public const int StepProgress = 3;
+        public const int StepDone = 4;
+         
 
         private readonly Random _rand = new();
 
@@ -30,28 +35,13 @@ namespace BH_Install.ViewModels
         private bool _failed;
         private string _failReason = string.Empty;
 
-        private string LauncherPath => Path.Combine(_model.RootPath, ProgramManifest.LauncherFileName(_model));
-        private string UninstallerPath => Path.Combine(_model.RootPath, ProgramManifest.UninstallFileName(_model));
+        //메이커가 빌드 직전에 BH_Install.Core 의 ProgramModel.json 에 저장한 매니페스트.
+        //비어 있으면(F5, 빈 ProgramModel.json) 미리보기 모드로 화면만 보여주고 실제 파일·레지스트리 작업은 하지 않는다.
+        private readonly ProgramModel _model = ProgramManifest.Instance.ProgramModel;
+        private readonly bool _isReal = ProgramManifest.Instance.IsLoaded;
 
-        public MainViewModel()
-        {
-            ProgramModel? embedded = ProgramManifest.LoadEmbedded();
-            _isReal = embedded is not null;
-            _model = embedded ?? CreateDummyModel();
-        }
-
-        private static ProgramModel CreateDummyModel() => new()
-        {
-            Name = "BH Sample Program",
-            Publisher = "BH Soft",
-            Version = "1.3.1",
-            Description = "웹 업데이트 기반 런처를 통해 배포되는 샘플 프로그램입니다.",
-            RootPath = @"C:\Program Files\BH Soft\BH Sample Program",
-            DataRootPath = @"C:\ProgramData\BH Soft\BH Sample Program",
-            RegistryKey = @"SOFTWARE\BH Soft\BH Sample Program",
-            MainExe = "BH_Program.exe",
-            ProgramId = 1,
-        };
+        private string LauncherPath => Path.Combine(_model.RootPath, ProgramManifest.Instance.LauncherFileName);
+        private string UninstallerPath => Path.Combine(_model.RootPath, ProgramManifest.Instance.UninstallFileName);
 
         // 설치 단계 정의. Action 이 null 인 단계는 표시만 한다.
         private sealed record InstallStage(double At, string Text, Func<MainViewModel, Task>? Action);
@@ -61,8 +51,8 @@ namespace BH_Install.ViewModels
         {
             new(0,  "설치 준비 중...",                          vm => vm.PrepareAsync()),
             new(6,  "루트 인증서 설치 중...",                    vm => vm.InstallRootCertificateAsync()),
-            new(18, "런처 복사 중...",                           vm => vm.ExtractPayloadAsync(ProgramManifest.LauncherPayloadName, vm.LauncherPath)),
-            new(34, "제거 프로그램 복사 중...",                   vm => vm.ExtractPayloadAsync(ProgramManifest.UninstallPayloadName, vm.UninstallerPath)),
+            new(18, "런처 복사 중...",                           vm => vm.ExtractPayloadAsync(PayloadResource.Launcher, vm.LauncherPath)),
+            new(34, "제거 프로그램 복사 중...",                   vm => vm.ExtractPayloadAsync(PayloadResource.Uninstall, vm.UninstallerPath)),
             new(50, "레지스트리 등록 중...",                     vm => vm.RegisterAsync()),
             new(64, "시작 메뉴 바로 가기 생성 중...",             vm => vm.CreateShortcutAsync(ShortcutHelper.StartMenuDirFor(vm._model))),
             new(76, "바탕화면 아이콘 생성 중...",                 vm => vm.CreateShortcutAsync(ShortcutHelper.DesktopDir)),
@@ -84,8 +74,46 @@ namespace BH_Install.ViewModels
         [ObservableProperty]
         private bool isCancelVisible = true;
 
+        //사용권 계약 동의. 동의해야 [다음] 이 켜진다
+        [ObservableProperty]
+        private bool eulaAccepted;
+
+        //사용권 계약 본문
+        public string EulaText => Eula.Build(_model.Name, _model.Publisher);
+
+        partial void OnEulaAcceptedChanged(bool value)
+        {
+            if (CurrentStep == StepEula)
+                IsNextEnabled = value;
+        }
+
         [ObservableProperty]
         private string licenseKey = "";
+
+        //라이선스 키 형식 오류 안내. 비어 있으면 화면에서 숨긴다.
+        [ObservableProperty]
+        private string licenseKeyError = "";
+
+        public const string LicenseKeyFormatMessage = "영문과 숫자만 입력할 수 있습니다. 하이픈은 자동으로 들어갑니다.";
+
+        //라이선스 키 길이 (하이픈 제외). 붙여넣기도 이 길이에서 잘린다.
+        public const int LicenseKeyLength = 12;
+        public static readonly string LicenseKeyLengthMessage = $"라이선스 키는 영문·숫자 {LicenseKeyLength}자입니다.";
+
+        //실제 처리에 쓰는 값. 화면 표시용 하이픈을 뺀 영문·숫자만 (대문자)
+        public string LicenseKeyRaw => LicenseKey.Replace("-", string.Empty).ToUpperInvariant();
+
+        private static readonly Regex LicenseKeyPattern = new("^[A-Za-z0-9-]*$", RegexOptions.Compiled);
+
+        //영문·숫자·하이픈으로만 되어 있는지
+        public static bool IsValidLicenseKeyChars(string text) => LicenseKeyPattern.IsMatch(text);
+
+        //허용되지 않는 문자를 입력하려 했을 때 뷰가 호출한다
+        public void ReportLicenseKeyFormatError() => LicenseKeyError = LicenseKeyFormatMessage;
+
+        //올바른 문자가 입력되면 안내를 지운다
+        partial void OnLicenseKeyChanged(string value) =>
+            LicenseKeyError = IsValidLicenseKeyChars(value) ? string.Empty : LicenseKeyFormatMessage;
 
         [ObservableProperty]
         private string stageText = "설치 준비 중...";
@@ -145,10 +173,15 @@ namespace BH_Install.ViewModels
             switch (CurrentStep)
             {
                 case StepWelcome:
-                    GoTo(StepLicense);
+                    GoTo(StepEula);
+                    break;
+                case StepEula:
+                    if (EulaAccepted)
+                        GoTo(StepLicense);
                     break;
                 case StepLicense:
-                    GoTo(StepProgress);
+                    //공인 IP 조회 등 네트워크를 타므로 비동기로 확인하고 통과하면 설치 단계로 간다
+                    _ = CheckLicenseThenContinueAsync();
                     break;
                 case StepDone:
                     if (RunNow && !_failed)
@@ -158,11 +191,116 @@ namespace BH_Install.ViewModels
             }
         }
 
+        // 라이선스 확인 중에는 버튼을 잠그고, 통과하면 설치로, 실패하면 사유를 보여주고 이 단계에 머문다.
+        private async Task CheckLicenseThenContinueAsync()
+        {
+            if (!IsValidLicenseKeyChars(LicenseKey))
+            {
+                ReportLicenseKeyFormatError();
+                return;
+            }
+            if (LicenseKeyRaw.Length != LicenseKeyLength)
+            {
+                LicenseKeyError = LicenseKeyLengthMessage;
+                return;
+            }
+
+            IsNextEnabled = false;
+            IsBackVisible = false;
+            NextLabel = "라이선스 확인 중...";
+
+            (bool ok, string message) = await CheckLicenseAsync();
+
+            if (ok)
+            {
+                GoTo(StepProgress);
+                return;
+            }
+
+            NextLabel = "설치";
+            IsNextEnabled = true;
+            IsBackVisible = true;
+            MessageBox.Show(message, "라이선스 확인", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        // 라이선스 서버에 활성 요청을 보낸다.
+        // 요청 값: 프로그램 ID, 요청 종류(120001 활성), 공인 IP(사설망 IP 아님), MAC, PC 이름, 사용자 이름, 입력한 라이선스 키
+        private async Task<(bool Ok, string Message)> CheckLicenseAsync()
+        {
+            if(string.IsNullOrEmpty(licenseKey))
+                return (false, "라이선스가 입력되지 않았습니다.");
+
+            if(licenseKey.Trim().Replace(" ", "").Replace("-", "").Length != 12)
+                return (false, "라이선스가 올바르지 않습니다.");
+
+            LicenseRequest request;
+            try
+            {
+                request = await LicenseRequest.CreateAsync((int)_model.ProgramId, LicenseRequestType.Activate, LicenseKeyRaw);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"PC 정보를 확인할 수 없습니다.\n{ex.Message}");
+            }
+
+            AddLog($"라이선스 요청: programId={request.ProgramId} type={request.RequestType} ip={request.Ip} mac={request.Mac} pc={request.PcName} user={request.UserName}");
+
+            if (string.IsNullOrEmpty(request.Ip))
+                return (false, "공인 IP 를 확인할 수 없습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.");
+
+            if (string.IsNullOrEmpty(request.Mac))
+                return (false, "네트워크 어댑터의 MAC 주소를 확인할 수 없습니다.");
+
+            ResLicense res = await GetLicenseActivateResult(request);
+
+            return (res.result == 1, res.msg);
+        }
+
+        private async Task<ResLicense> GetLicenseActivateResult(LicenseRequest reqLicense)
+        {
+            ResLicense result = new ResLicense();
+            result.result = 0;
+            try
+            {
+                HttpClientHandler handler = new HttpClientHandler()
+                {
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+                };
+                HttpClient client = new HttpClient();
+                string _baseUrl = "https://www.bhsoft.co.kr";
+#if DEBUG
+                _baseUrl = "http://localhost:8169";
+#endif
+                string apiUrl = $"{_baseUrl}/license/register";
+
+                Dictionary<string, string> dic = new Dictionary<string, string>();
+                dic.Add("license_key", reqLicense.LicenseKey);
+                dic.Add("program_num", reqLicense.ProgramId);
+                dic.Add("request_type", reqLicense.RequestType);
+                dic.Add("ip", reqLicense.ProgramId);
+                dic.Add("mac", reqLicense.Mac);
+                dic.Add("pc_name", reqLicense.PcName);
+                dic.Add("user_name", reqLicense.UserName);
+                FormUrlEncodedContent content = new FormUrlEncodedContent(dic);
+                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+                string str = await response.Content.ReadAsStringAsync();
+                result = JsonConvert.DeserializeObject<ResLicense>(str) ?? result;
+                //result.result = 1;
+            }
+            catch (Exception ex)
+            {
+                result.msg = ex.Message;
+            }
+            return result;
+        }
+
         [RelayCommand]
         private void Back()
         {
-            if (CurrentStep is StepLicense)
+            if (CurrentStep is StepEula)
                 GoTo(StepWelcome);
+            else if (CurrentStep is StepLicense)
+                GoTo(StepEula);
         }
 
         [RelayCommand]
@@ -178,6 +316,12 @@ namespace BH_Install.ViewModels
                     NextLabel = "다음  〉";
                     IsNextEnabled = true;
                     IsBackVisible = false;
+                    IsCancelVisible = true;
+                    break;
+                case StepEula:
+                    NextLabel = "다음  〉";
+                    IsNextEnabled = EulaAccepted;
+                    IsBackVisible = true;
                     IsCancelVisible = true;
                     break;
                 case StepLicense:
@@ -307,7 +451,7 @@ namespace BH_Install.ViewModels
 
         private Task ExtractPayloadAsync(string resourceName, string destination) => RunReal(() =>
         {
-            if (!ProgramManifest.ExtractPayload(resourceName, destination))
+            if (!PayloadResource.Extract(resourceName, destination))
                 throw new InvalidOperationException($"설치 파일에 {Path.GetFileName(destination)} 이(가) 포함되어 있지 않습니다.");
 
             AddLog($"복사됨: {destination}");

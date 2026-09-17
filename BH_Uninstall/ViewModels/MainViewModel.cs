@@ -15,9 +15,10 @@ namespace BH_Uninstall.ViewModels
         public const int ScreenProgress = 1;
         public const int ScreenDone = 2;
 
-        // 메이커가 임베드한 매니페스트. 없으면(F5 디버깅) 더미로 화면만 보여주고 실제 삭제는 하지 않는다.
-        private readonly ProgramModel _model;
-        private readonly bool _isReal;
+        // 메이커가 빌드 직전에 BH_Install.Core 의 ProgramModel.json 에 저장한 매니페스트.
+        // 비어 있으면(F5, 빈 ProgramModel.json) 화면만 보여주고 실제 삭제는 하지 않는다.
+        private readonly ProgramModel _model = ProgramManifest.Instance.ProgramModel;
+        private readonly bool _isReal = ProgramManifest.Instance.IsLoaded;
 
         private readonly Random _rand = new();
 
@@ -31,23 +32,8 @@ namespace BH_Uninstall.ViewModels
 
         public MainViewModel()
         {
-            ProgramModel? embedded = ProgramManifest.LoadEmbedded();
-            _isReal = embedded is not null;
-            _model = embedded ?? CreateDummyModel();
-            _selfPath = Environment.ProcessPath ?? Path.Combine(InstallDir, ProgramManifest.UninstallFileName(_model));
+            _selfPath = Environment.ProcessPath ?? Path.Combine(InstallDir, ProgramManifest.Instance.UninstallFileName);
         }
-
-        private static ProgramModel CreateDummyModel() => new()
-        {
-            Name = "BH Sample Program",
-            Publisher = "BH Soft",
-            Version = "1.3.1",
-            Description = "웹 업데이트 기반 런처를 통해 배포되는 샘플 프로그램입니다.",
-            RootPath = @"C:\Program Files\BH Soft\BH Sample Program",
-            DataRootPath = @"C:\ProgramData\BH Soft\BH Sample Program",
-            RegistryKey = @"SOFTWARE\BH Soft\BH Sample Program",
-            MainExe = "BH_Program.exe",
-        };
 
         private sealed record RemoveStage(double At, string Text, Func<MainViewModel, Task>? Action);
 

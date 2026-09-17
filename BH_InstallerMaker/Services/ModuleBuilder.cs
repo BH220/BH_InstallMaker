@@ -22,7 +22,7 @@ namespace BH_InstallerMaker.Services
 
         public ModuleBuilder(ProjectService projects) => _projects = projects;
 
-        public sealed record BuildResult(string SetupPath, string LauncherPath, string UninstallerPath, string ManifestPath);
+        public sealed record BuildResult(string SetupPath, string LauncherPath, string UninstallerPath);
 
         //모듈 소스 루트(.sln 이 있는 폴더). 메이커는 이 저장소 안에서 실행되므로 실행 위치에서 위로 올라가며 찾는다.
         public static string? FindModuleSourceRoot()
@@ -36,19 +36,14 @@ namespace BH_InstallerMaker.Services
             return null;
         }
 
-        public async Task<BuildResult> BuildAsync(
-            ProgramModel model, string workDir, string sourceRoot, SignOptions sign,
-            Action<string> log, string? launcherIconPath = null, CancellationToken ct = default)
+        public async Task<BuildResult> BuildAsync(ProgramModel model, string workDir, string sourceRoot, SignOptions sign, Action<string> log, string? launcherIconPath = null, CancellationToken ct = default)
         {
             //작업 폴더를 비운 상태로 시작
             if (Directory.Exists(workDir))
                 Directory.Delete(workDir, recursive: true);
             Directory.CreateDirectory(workDir);
 
-            //매니페스트
-            string manifestPath = Path.Combine(workDir, "program.json");
-            File.WriteAllText(manifestPath, ProgramManifest.ToJson(model));
-            log($"매니페스트: {manifestPath}");
+            ProgramManifest.Instance.SaveToModel(model);
 
             //모듈 exe 의 파일 버전에 프로그램 버전을 찍는다 (숫자.숫자 형식일 때만)
             string? version = IsStampableVersion(model.Version) ? model.Version : null;
@@ -67,12 +62,12 @@ namespace BH_InstallerMaker.Services
                 log("대상 프로젝트에 ApplicationIcon 이 없어 런처는 기본 아이콘을 씁니다.");
             }
             string launcherExe = await PublishModuleAsync(model, sourceRoot, LauncherProject, Path.Combine(workDir, "launcher"),
-                manifestPath, version, launcherProps, log, ct);
+                 version, launcherProps, log, ct);
             await SignAsync(sign, launcherExe, $"{model.Name} 런처", log, ct);
 
             //2) 언인스톨
             string uninstallExe = await PublishModuleAsync(model, sourceRoot, UninstallProject, Path.Combine(workDir, "uninstall"),
-                manifestPath, version, null, log, ct);
+                 version, null, log, ct);
             await SignAsync(sign, uninstallExe, $"{model.Name} 제거", log, ct);
 
             //3) 설치 (서명된 런처·언인스톨을 페이로드로 포함)
@@ -81,8 +76,11 @@ namespace BH_InstallerMaker.Services
                 ["BH_LauncherExe"] = launcherExe,
                 ["BH_UninstallExe"] = uninstallExe,
             };
+            //설치 화면 로고에 쓸 대상 아이콘. 설치 exe 자체의 아이콘은 바꾸지 않는다.
+            if (launcherProps is not null)
+                payload["BH_ProgramIcon"] = launcherIconPath!;
             string installExe = await PublishModuleAsync(model, sourceRoot, InstallProject, Path.Combine(workDir, "install"),
-                manifestPath, version, payload, log, ct);
+                 version, payload, log, ct);
             await SignAsync(sign, installExe, $"{model.Name} 설치", log, ct);
 
             //4) 최종 파일명
@@ -91,11 +89,11 @@ namespace BH_InstallerMaker.Services
             File.Copy(installExe, setupPath, overwrite: true);
 
             log($"설치 프로그램: {setupPath} ({new FileInfo(setupPath).Length / 1024.0 / 1024.0:0.0} MB)");
-            return new BuildResult(setupPath, launcherExe, uninstallExe, manifestPath);
+            return new BuildResult(setupPath, launcherExe, uninstallExe);
         }
 
         private async Task<string> PublishModuleAsync(ProgramModel model,
-            string sourceRoot, string project, string outDir, string manifestPath, string? version,
+            string sourceRoot, string project, string outDir,string? version,
             IReadOnlyDictionary<string, string>? extraProps, Action<string> log, CancellationToken ct)
         {
             string csproj = Path.Combine(sourceRoot, project, project + ".csproj");
@@ -108,7 +106,6 @@ namespace BH_InstallerMaker.Services
             {
                 "-p:PublishProfile=FolderProfile",     //단일 파일 설정은 각 모듈의 pubxml 에 있다
                 "-p:BH_SignAfterPublish=false",         //VS 게시용 서명 훅은 끄고 메이커가 직접 서명한다
-                $"-p:BH_ProgramJson={manifestPath}",
             };
             if (version is not null)
                 args.Add($"-p:Version={version}");
@@ -134,9 +131,9 @@ namespace BH_InstallerMaker.Services
             //설치 프로그램이 설치 폴더에 놓는 이름(ProgramManifest.*FileName)과 같은 규칙이다.
             string newName = project switch
             {
-                LauncherProject  => ProgramManifest.LauncherFileName(model),
-                UninstallProject => ProgramManifest.UninstallFileName(model),
-                _                => ProgramManifest.InstallFileName(model),
+                LauncherProject  => ProgramManifest.Instance.LauncherFileName,
+                UninstallProject => ProgramManifest.Instance.UninstallFileName,
+                _                => ProgramManifest.Instance.InstallFileName,
             };
             string newExe = Path.Combine(outDir, newName);
             File.Move(exe, newExe, overwrite: true);

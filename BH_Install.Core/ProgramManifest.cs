@@ -1,74 +1,92 @@
-﻿using System.IO;
-using System.Reflection;
-using System.Text.Json;
+﻿using Newtonsoft.Json;
+using System.IO;
+using System.Reflection; 
 
 namespace BH_Install.Core
 {
-    //program.json 매니페스트와 페이로드(런처/언인스톨 exe)를 다룬다.
-    //
-    //메이커가 각 모듈을 게시할 때 -p:BH_ProgramJson / -p:BH_LauncherExe / -p:BH_UninstallExe 로 넘긴 파일이
-    //아래 LogicalName 으로 모듈의 진입 어셈블리에 임베드된다 (BH.Publish.targets, BH_Install.csproj 참고).
-    //단일 파일 exe 안에 들어가므로 코드 서명으로 함께 봉인되고, 설치 뒤에 바꿀 수 없다.
-    public static class ProgramManifest
+    public class ProgramManifest
     {
-        public const string ResourceName = "BH.program.json";
-        public const string LauncherPayloadName = "BH.payload.BH_Launcher.exe";
-        public const string UninstallPayloadName = "BH.payload.BH_Uninstall.exe";
+        private const string ResourceName = "ProgramModel.json";
+        public ProgramModel ProgramModel { get; private set; }
 
-        //설치 폴더에 놓이는 파일 이름. 메이커가 만드는 exe 이름과 같은 규칙이다: {대상 exe 이름}.Launcher.exe
-        public static string LauncherFileName(ProgramModel m) => $"{ExeStem(m)}.Launcher.exe";
-        public static string UninstallFileName(ProgramModel m) => $"{ExeStem(m)}.Uninstall.exe";
-        public static string InstallFileName(ProgramModel m) => $"{ExeStem(m)}.Install.exe";
+        //매니페스트가 채워져 있는지. 메이커는 MainExe 를 항상 넣으므로 비어 있으면 빌드를 거치지 않은 것(F5, 빈 ProgramModel.json)이다.
+        //모듈은 이 값이 false 면 화면만 보여주는 미리보기 모드로 동작한다.
+        public bool IsLoaded => !string.IsNullOrWhiteSpace(ProgramModel.MainExe);
 
-        private static string ExeStem(ProgramModel m)
+        //모듈 exe 이름: {대상 exe 이름}.Install.exe / .Launcher.exe / .Uninstall.exe
+        //메이커가 산출물 이름을 정할 때와 설치 프로그램이 설치 폴더에 놓을 때 같은 규칙을 쓴다.
+        //ProgramModel 에서 매번 계산하므로 SaveToModel() 뒤에도 새 값이 나온다.
+        public string InstallFileName => $"{ExeStem}.Install.exe";
+        public string LauncherFileName => $"{ExeStem}.Launcher.exe";
+        public string UninstallFileName => $"{ExeStem}.Uninstall.exe";
+
+        private string ExeStem
         {
-            string stem = Path.GetFileNameWithoutExtension(m.MainExe ?? string.Empty);
-            return string.IsNullOrWhiteSpace(stem) ? "BH" : stem;
+            get
+            {
+                string stem = Path.GetFileNameWithoutExtension(ProgramModel.MainExe ?? string.Empty);
+                return string.IsNullOrWhiteSpace(stem) ? "BH" : stem;
+            }
         }
 
-        private static readonly JsonSerializerOptions JsonOptions = new()
+        private static ProgramManifest instance = null;
+        public static ProgramManifest Instance
         {
-            WriteIndented = true,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        };
+            get
+            {
+                if (instance == null)
+                {
+                    instance = new ProgramManifest();
+                    instance.InitLoad();
+                }
+                return instance;
+            }
+        }
 
-        public static string ToJson(ProgramModel model) => JsonSerializer.Serialize(model, JsonOptions);
-
-        public static ProgramModel? FromJson(string json) => JsonSerializer.Deserialize<ProgramModel>(json, JsonOptions);
-
-        //진입 어셈블리에 임베드된 매니페스트를 읽는다. 없으면(F5 디버깅 등) null.
-        public static ProgramModel? LoadEmbedded(Assembly? assembly = null)
+        private void InitLoad()
         {
-            assembly ??= Assembly.GetEntryAssembly();
-            if (assembly is null) return null;
-
+            Assembly assembly = typeof(ProgramManifest).Assembly;   // BH_Install.Core
             using Stream? stream = assembly.GetManifestResourceStream(ResourceName);
-            if (stream is null) return null;
-
-            using var reader = new StreamReader(stream);
-            return FromJson(reader.ReadToEnd());
+            if (stream != null)
+            {
+                using var reader = new StreamReader(stream);
+                string json = reader.ReadToEnd();
+                if (string.IsNullOrWhiteSpace(json))
+                    ProgramModel = new ProgramModel();
+                else
+                    ProgramModel = JsonConvert.DeserializeObject<ProgramModel>(json) ?? new ProgramModel();
+            }
+            else
+            {
+                ProgramModel = new ProgramModel();
+            }
         }
 
-        //임베드된 페이로드가 있는지
-        public static bool HasPayload(string resourceName, Assembly? assembly = null)
+
+        public void SaveToModel(ProgramModel model)
         {
-            assembly ??= Assembly.GetEntryAssembly();
-            return assembly?.GetManifestResourceInfo(resourceName) is not null;
+            string dir = FindCoreProjectDir()
+                ?? throw new DirectoryNotFoundException(
+                    $"{CoreProjectName} 프로젝트 폴더를 찾을 수 없습니다. 메이커는 이 저장소 안에서 실행해야 합니다.");
+
+            string path = Path.Combine(dir, ResourceName);
+            string json = JsonConvert.SerializeObject(model, Formatting.Indented);
+            File.WriteAllText(path, json, new System.Text.UTF8Encoding(false));
+            ProgramModel = model;
         }
 
-        //임베드된 페이로드를 파일로 꺼낸다. 없으면 false.
-        public static bool ExtractPayload(string resourceName, string destinationPath, Assembly? assembly = null)
+        private const string CoreProjectName = "BH_Install.Core";
+         
+        public static string? FindCoreProjectDir()
         {
-            assembly ??= Assembly.GetEntryAssembly();
-            using Stream? stream = assembly?.GetManifestResourceStream(resourceName);
-            if (stream is null) return false;
-
-            string? dir = Path.GetDirectoryName(destinationPath);
-            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-
-            using FileStream file = File.Create(destinationPath);
-            stream.CopyTo(file);
-            return true;
+            for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+            {
+                string candidate = Path.Combine(dir.FullName, CoreProjectName);
+                if (File.Exists(Path.Combine(candidate, CoreProjectName + ".csproj")))
+                    return candidate;
+            }
+            return null;
         }
+
     }
 }

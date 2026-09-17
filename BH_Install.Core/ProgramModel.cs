@@ -21,9 +21,12 @@
         public string RegistryKey { get; set; } = "";
         //런처가 실행할 대상 프로그램 exe (RootPath 기준 상대 경로). 메이커가 csproj 의 AssemblyName 으로 자동 결정한다.
         public string MainExe { get; set; } = "";
-
+        //런처가 업데이트 목록과 파일을 조회하는 서버 주소. 프로그램마다 다르다. 예: https://update.bhsoft.co.kr/myapp/
+        public string UpdateUrl { get; set; } = "";
+        //프로그램 아이콘
+        public string MainIcon { get; set; } = "";
 
         //라이선스 인증은 모든 프로그램이 필수로 사용한다. DB 에서 확인하는 프로그램 ID.
-        public int ProgramId { get; set; }
+        public int ProgramId { get; set; } = 0;
     }
 }
