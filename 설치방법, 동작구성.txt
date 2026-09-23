@@ -26,3 +26,26 @@ BH_InstallerMaker 프로젝트에서
 		<InformationalVersion>$(AppVersion)</InformationalVersion>
 
 	</PropertyGroup>
+
+
+게시를 위한 준비 작업
+
+루트경로에 docs 폴더를 만들고 
+
+솔루션 폴더에서 publish 폴더 만들고
+
+해당 경로에 메모장으로 아래 프로젝트 파일 만든다 
+
+파일명은 docs.msbuildproj
+
+<Project Sdk="Microsoft.Build.NoTargets/3.7.56">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <BaseOutputPath>obj\bin\</BaseOutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="**\*" Exclude="obj\**;bin\**;.vs\**;*.msbuildproj" />
+  </ItemGroup>
+</Project>

@@ -2,7 +2,7 @@
 using System.Net.Http;
 using System.Net.NetworkInformation;
 
-namespace BH_Install.Core
+namespace BH_Install.Core.Helper
 {
     //라이선스 요청에 넣는 PC 식별 정보를 모은다. 설치 프로그램과 런처가 함께 쓴다.
     public static class MachineInfo

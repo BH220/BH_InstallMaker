@@ -13,7 +13,7 @@
     AllowsTransparency="True"
     Background="Transparent"
     FontFamily="Segoe UI, Malgun Gothic"
-    Icon="pack://application:,,,/BH_Launcher;component/main_icon.ico"
+    Icon="pack://application:,,,/BH_Install.Core;component/Resources/ProgramIcon.ico"
     ResizeMode="NoResize"
     TextOptions.TextFormattingMode="Display"
     WindowStartupLocation="CenterScreen"

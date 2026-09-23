@@ -1,6 +1,7 @@
-﻿using System.IO;
+﻿using BH_Install.Core.Common;
+using System.IO;
 
-namespace BH_Install.Core
+namespace BH_Install.Core.Helper
 {
     //바로 가기(.lnk) 생성·삭제. WScript.Shell COM 을 늦은 바인딩(dynamic)으로 쓴다.
     public static class ShortcutHelper

@@ -1,4 +1,6 @@
-﻿namespace BH_Install.Core
+﻿using BH_Install.Core.Helper;
+
+namespace BH_Install.Core.Common
 {
     //라이선스 서버 요청 종류 코드
     public static class LicenseRequestType

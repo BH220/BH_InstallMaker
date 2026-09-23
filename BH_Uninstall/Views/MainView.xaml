@@ -1,4 +1,4 @@
-﻿<Window
+<Window
     x:Class="BH_Uninstall.Views.MainView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -22,6 +22,7 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <!--  화면 패널 표시(Conv.IndexToVis)와 진입 애니메이션(Panel.Step)은 Core Theme.xaml 의 공용 리소스를 쓴다  -->
     </Window.Resources>
 
     <Border
@@ -100,11 +101,11 @@
                 </StackPanel>
             </StackPanel>
 
-            <!--  화면들  -->
+            <!--  화면들. ScreenIndex 와 같은 번호의 패널만 보인다  -->
             <Grid Grid.Row="2" Margin="40,20,40,0">
 
                 <!--  1) 확인  -->
-                <Grid x:Name="PanelConfirm">
+                <Grid Style="{StaticResource Panel.Step}" Visibility="{Binding ScreenIndex, Converter={StaticResource Conv.IndexToVis}, ConverterParameter=0}">
                     <Grid.RenderTransform>
                         <TranslateTransform />
                     </Grid.RenderTransform>
@@ -143,7 +144,7 @@
                                     FontSize="12.5"
                                     Foreground="#8A3A3E"
                                     LineHeight="20"
-                                    Text="프로그램 파일, 레지스트리, 바로 가기가 삭제되며 되돌릴 수 없습니다. 데이터 폴더는 유지됩니다."
+                                    Text="프로그램 파일, 레지스트리, 바로 가기가 삭제되며 되돌릴 수 없습니다.&#x0a;데이터 폴더는 유지됩니다."
                                     TextWrapping="Wrap" />
                             </Grid>
                         </Border>
@@ -156,7 +157,7 @@
                 </Grid>
 
                 <!--  2) 진행  -->
-                <Grid x:Name="PanelProgress" Visibility="Collapsed">
+                <Grid Style="{StaticResource Panel.Step}" Visibility="{Binding ScreenIndex, Converter={StaticResource Conv.IndexToVis}, ConverterParameter=1}">
                     <Grid.RenderTransform>
                         <TranslateTransform />
                     </Grid.RenderTransform>
@@ -212,7 +213,7 @@
                 </Grid>
 
                 <!--  3) 완료  -->
-                <Grid x:Name="PanelDone" Visibility="Collapsed">
+                <Grid Style="{StaticResource Panel.Step}" Visibility="{Binding ScreenIndex, Converter={StaticResource Conv.IndexToVis}, ConverterParameter=2}">
                     <Grid.RenderTransform>
                         <TranslateTransform />
                     </Grid.RenderTransform>
@@ -257,15 +258,43 @@
                         Content="취소"
                         Style="{StaticResource Btn.Secondary}"
                         Visibility="{Binding IsCancelVisible, Converter={StaticResource BoolToVis}}" />
+
+                    <!--  진행 버튼. 확인·진행 중에는 빨간 [제거], 완료 화면(IsDone)에서는 기본 스타일의 [닫기]  -->
                     <Button
-                        x:Name="BtnAction"
                         MinWidth="110"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Command="{Binding ActionCommand}"
                         Content="{Binding ActionLabel}"
-                        IsEnabled="{Binding IsActionEnabled}"
-                        Style="{StaticResource Btn.Danger}" />
+                        IsEnabled="{Binding IsActionEnabled}">
+                        <Button.Style>
+                            <Style BasedOn="{StaticResource Btn.Danger}" TargetType="Button">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDone}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button
+                        MinWidth="110"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Command="{Binding ActionCommand}"
+                        Content="{Binding ActionLabel}"
+                        IsEnabled="{Binding IsActionEnabled}">
+                        <Button.Style>
+                            <Style BasedOn="{StaticResource Btn.Primary}" TargetType="Button">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDone}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                 </Grid>
             </Border>
         </Grid>

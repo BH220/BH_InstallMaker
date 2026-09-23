@@ -1,4 +1,7 @@
-﻿using BH_Install.Core;
+using BH_Install.Core;
+using BH_Install.Core.Common;
+using BH_Install.Core.Helper;
+using BH_Install.Core.Manager;
 using BH_Install.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -7,11 +10,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
-using System.Text.RegularExpressions;
-using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -19,34 +19,40 @@ namespace BH_Install.ViewModels
 {
     public partial class MainViewModel : ObservableObject
     {
+        #region 공통변수
+
+        //위저드 단계
         public const int StepWelcome = 0;
         public const int StepEula = 1;
         public const int StepLicense = 2;
         public const int StepProgress = 3;
         public const int StepDone = 4;
-         
 
-        private readonly Random _rand = new();
-
-        // 루트 인증서 설치 결과. 완료 화면 문구에 쓴다.
-        private CertInstallReport? _certReport;
-
-        // 설치 중 오류
-        private bool _failed;
-        private string _failReason = string.Empty;
+        //라이선스 키 규칙. 하이픈은 표시용이고 처리 값은 영문·숫자 12자다. 붙여넣기도 이 길이에서 잘린다.
+        public const int LicenseKeyLength = 12;
+        public const string LicenseKeyFormatMessage = "영문과 숫자만 입력할 수 있습니다. 하이픈은 자동으로 들어갑니다.";
+        public static readonly string LicenseKeyLengthMessage = $"라이선스 키는 영문·숫자 {LicenseKeyLength}자입니다.";
+        private static readonly Regex LicenseKeyPattern = new("^[A-Za-z0-9-]*$", RegexOptions.Compiled);
 
         //메이커가 빌드 직전에 BH_Install.Core 의 ProgramModel.json 에 저장한 매니페스트.
         //비어 있으면(F5, 빈 ProgramModel.json) 미리보기 모드로 화면만 보여주고 실제 파일·레지스트리 작업은 하지 않는다.
-        private readonly ProgramModel _model = ProgramManifest.Instance.ProgramModel;
-        private readonly bool _isReal = ProgramManifest.Instance.IsLoaded;
+        private readonly ProgramModel _model;
+        private readonly bool _isReal;
 
-        private string LauncherPath => Path.Combine(_model.RootPath, ProgramManifest.Instance.LauncherFileName);
-        private string UninstallerPath => Path.Combine(_model.RootPath, ProgramManifest.Instance.UninstallFileName);
+        //진행률 연출용
+        private readonly Random _rand = new();
 
-        // 설치 단계 정의. Action 이 null 인 단계는 표시만 한다.
+        //루트 인증서 설치 결과. 완료 화면 문구에 쓴다.
+        private CertInstallReport? _certReport;
+
+        //설치 중 오류
+        private bool _failed;
+        private string _failReason = string.Empty;
+
+        //설치 단계 정의. Action 이 null 인 단계는 표시만 한다.
         private sealed record InstallStage(double At, string Text, Func<MainViewModel, Task>? Action);
 
-        // (진행률 임계값, 상태 문구, 실제 작업) 설치 시나리오
+        //(진행률 임계값, 상태 문구, 실제 작업) 설치 시나리오
         private static readonly InstallStage[] Stages =
         {
             new(0,  "설치 준비 중...",                          vm => vm.PrepareAsync()),
@@ -59,6 +65,11 @@ namespace BH_Install.ViewModels
             new(92, "설치 마무리 중...",                         null),
         };
 
+        #endregion
+
+        #region 프로퍼티
+
+        // ----- 위저드 상태 -----
         [ObservableProperty]
         private int currentStep = StepWelcome;
 
@@ -74,19 +85,25 @@ namespace BH_Install.ViewModels
         [ObservableProperty]
         private bool isCancelVisible = true;
 
-        //사용권 계약 동의. 동의해야 [다음] 이 켜진다
+        //사이드바 단계 목록. CurrentStep 이 바뀌면 IsCurrent/IsDone 을 갱신하고 화면은 트리거로 그린다.
+        public IReadOnlyList<WizardStep> Steps { get; } = new[]
+        {
+            new WizardStep(StepWelcome,  "시작"),
+            new WizardStep(StepEula,     "사용권 계약"),
+            new WizardStep(StepLicense,  "라이선스 인증"),
+            new WizardStep(StepProgress, "설치 진행"),
+            new WizardStep(StepDone,     "완료"),
+        };
+
+        // ----- 사용권 계약 -----
+        //동의해야 [다음] 이 켜진다
         [ObservableProperty]
         private bool eulaAccepted;
 
         //사용권 계약 본문
         public string EulaText => Eula.Build(_model.Name, _model.Publisher);
 
-        partial void OnEulaAcceptedChanged(bool value)
-        {
-            if (CurrentStep == StepEula)
-                IsNextEnabled = value;
-        }
-
+        // ----- 라이선스 -----
         [ObservableProperty]
         private string licenseKey = "";
 
@@ -94,27 +111,10 @@ namespace BH_Install.ViewModels
         [ObservableProperty]
         private string licenseKeyError = "";
 
-        public const string LicenseKeyFormatMessage = "영문과 숫자만 입력할 수 있습니다. 하이픈은 자동으로 들어갑니다.";
-
-        //라이선스 키 길이 (하이픈 제외). 붙여넣기도 이 길이에서 잘린다.
-        public const int LicenseKeyLength = 12;
-        public static readonly string LicenseKeyLengthMessage = $"라이선스 키는 영문·숫자 {LicenseKeyLength}자입니다.";
-
         //실제 처리에 쓰는 값. 화면 표시용 하이픈을 뺀 영문·숫자만 (대문자)
         public string LicenseKeyRaw => LicenseKey.Replace("-", string.Empty).ToUpperInvariant();
 
-        private static readonly Regex LicenseKeyPattern = new("^[A-Za-z0-9-]*$", RegexOptions.Compiled);
-
-        //영문·숫자·하이픈으로만 되어 있는지
-        public static bool IsValidLicenseKeyChars(string text) => LicenseKeyPattern.IsMatch(text);
-
-        //허용되지 않는 문자를 입력하려 했을 때 뷰가 호출한다
-        public void ReportLicenseKeyFormatError() => LicenseKeyError = LicenseKeyFormatMessage;
-
-        //올바른 문자가 입력되면 안내를 지운다
-        partial void OnLicenseKeyChanged(string value) =>
-            LicenseKeyError = IsValidLicenseKeyChars(value) ? string.Empty : LicenseKeyFormatMessage;
-
+        // ----- 설치 진행 -----
         [ObservableProperty]
         private string stageText = "설치 준비 중...";
 
@@ -124,12 +124,17 @@ namespace BH_Install.ViewModels
         [ObservableProperty]
         private string percentText = "0%";
 
+        //완료 화면의 [지금 실행]
         [ObservableProperty]
         private bool runNow = true;
 
         public ObservableCollection<string> Logs { get; } = new();
 
-        // 표시 텍스트
+        //설치 폴더에 놓이는 런처·제거 프로그램 경로
+        private string LauncherPath => Path.Combine(_model.RootPath, ProgramManifest.Instance.LauncherFileName);
+        private string UninstallerPath => Path.Combine(_model.RootPath, ProgramManifest.Instance.UninstallFileName);
+
+        // ----- 표시 텍스트 -----
         public string ProgramName => _model.Name;
         public string VersionChip => $"v{_model.Version}";
         public string PublisherFooter => $"© {_model.Publisher}";
@@ -148,7 +153,7 @@ namespace BH_Install.ViewModels
             ? $"설치 중 오류가 발생했습니다.\n{_failReason}"
             : $"{_model.Name}이(가) 성공적으로 설치되었습니다.";
 
-        // 완료 화면에 보여줄 루트 인증서 설치 결과 문구
+        //완료 화면에 보여줄 루트 인증서 설치 결과 문구
         public string CertStatusText
         {
             get
@@ -165,7 +170,26 @@ namespace BH_Install.ViewModels
             }
         }
 
+        // ----- 이벤트 -----
+        //창을 닫아 달라는 요청 (마침·취소)
         public event EventHandler? CloseRequested;
+
+        #endregion
+
+        #region 생성자
+
+        public MainViewModel()
+        {
+            ProgramManifest manifest = ProgramManifest.Instance;
+            _model = manifest.ProgramModel;
+            _isReal = manifest.IsLoaded;
+
+            UpdateSteps();
+        }
+
+        #endregion
+
+        #region 클릭 이벤트
 
         [RelayCommand]
         private void Next()
@@ -191,7 +215,58 @@ namespace BH_Install.ViewModels
             }
         }
 
-        // 라이선스 확인 중에는 버튼을 잠그고, 통과하면 설치로, 실패하면 사유를 보여주고 이 단계에 머문다.
+        [RelayCommand]
+        private void Back()
+        {
+            if (CurrentStep is StepEula)
+                GoTo(StepWelcome);
+            else if (CurrentStep is StepLicense)
+                GoTo(StepEula);
+        }
+
+        [RelayCommand]
+        private void Cancel() => CloseRequested?.Invoke(this, EventArgs.Empty);
+
+        //허용되지 않는 문자를 입력하려 했을 때 뷰(LicenseKeyInput 첨부 동작)가 실행한다
+        [RelayCommand]
+        private void ReportLicenseKeyFormatError() => LicenseKeyError = LicenseKeyFormatMessage;
+
+        #endregion
+
+        #region 일반함수
+
+        // ----- 속성 변경 처리 -----
+
+        partial void OnCurrentStepChanged(int value) => UpdateSteps();
+
+        partial void OnEulaAcceptedChanged(bool value)
+        {
+            if (CurrentStep == StepEula)
+                IsNextEnabled = value;
+        }
+
+        //올바른 문자가 입력되면 안내를 지운다
+        partial void OnLicenseKeyChanged(string value) =>
+            LicenseKeyError = IsValidLicenseKeyChars(value) ? string.Empty : LicenseKeyFormatMessage;
+
+        //사이드바 단계 칩의 현재·완료 상태를 CurrentStep 에 맞춘다
+        private void UpdateSteps()
+        {
+            foreach (WizardStep step in Steps)
+            {
+                step.IsCurrent = step.Index == CurrentStep;
+                step.IsDone = step.Index < CurrentStep;
+            }
+        }
+
+        // ----- 라이선스 키 입력 -----
+
+        //영문·숫자·하이픈으로만 되어 있는지
+        private static bool IsValidLicenseKeyChars(string text) => LicenseKeyPattern.IsMatch(text);
+
+        // ----- 라이선스 확인 -----
+
+        //라이선스 확인 중에는 버튼을 잠그고, 통과하면 설치로, 실패하면 사유를 보여주고 이 단계에 머문다.
         private async Task CheckLicenseThenContinueAsync()
         {
             if (!IsValidLicenseKeyChars(LicenseKey))
@@ -223,20 +298,20 @@ namespace BH_Install.ViewModels
             MessageBox.Show(message, "라이선스 확인", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
-        // 라이선스 서버에 활성 요청을 보낸다.
-        // 요청 값: 프로그램 ID, 요청 종류(120001 활성), 공인 IP(사설망 IP 아님), MAC, PC 이름, 사용자 이름, 입력한 라이선스 키
+        //라이선스 서버에 활성 요청을 보낸다.
+        //요청 값: 프로그램 ID, 요청 종류(120001 활성), 공인 IP(사설망 IP 아님), MAC, PC 이름, 사용자 이름, 입력한 라이선스 키
         private async Task<(bool Ok, string Message)> CheckLicenseAsync()
         {
-            if(string.IsNullOrEmpty(licenseKey))
+            if (string.IsNullOrEmpty(LicenseKey))
                 return (false, "라이선스가 입력되지 않았습니다.");
 
-            if(licenseKey.Trim().Replace(" ", "").Replace("-", "").Length != 12)
+            if (LicenseKeyRaw.Length != LicenseKeyLength)
                 return (false, "라이선스가 올바르지 않습니다.");
 
             LicenseRequest request;
             try
             {
-                request = await LicenseRequest.CreateAsync((int)_model.ProgramId, LicenseRequestType.Activate, LicenseKeyRaw);
+                request = await LicenseRequest.CreateAsync(_model.ProgramId, LicenseRequestType.Activate, LicenseKeyRaw);
             }
             catch (Exception ex)
             {
@@ -256,36 +331,34 @@ namespace BH_Install.ViewModels
             return (res.result == 1, res.msg);
         }
 
+        //라이선스 서버 POST /license/register 호출. 네트워크 오류는 result=0 과 오류 문구로 돌려준다.
         private async Task<ResLicense> GetLicenseActivateResult(LicenseRequest reqLicense)
         {
-            ResLicense result = new ResLicense();
-            result.result = 0;
+            ResLicense result = new ResLicense { result = 0 };
             try
             {
-                HttpClientHandler handler = new HttpClientHandler()
-                {
-                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-                };
-                HttpClient client = new HttpClient();
-                string _baseUrl = "https://www.bhsoft.co.kr";
-#if DEBUG
-                _baseUrl = "http://localhost:8169";
+                string baseUrl = "https://www.bhsoft.co.kr";
+#if DEBUG7
+                baseUrl = "http://localhost:8169";
 #endif
-                string apiUrl = $"{_baseUrl}/license/register";
+                string apiUrl = $"{baseUrl}/license/register";
 
-                Dictionary<string, string> dic = new Dictionary<string, string>();
-                dic.Add("license_key", reqLicense.LicenseKey);
-                dic.Add("program_num", reqLicense.ProgramId);
-                dic.Add("request_type", reqLicense.RequestType);
-                dic.Add("ip", reqLicense.ProgramId);
-                dic.Add("mac", reqLicense.Mac);
-                dic.Add("pc_name", reqLicense.PcName);
-                dic.Add("user_name", reqLicense.UserName);
+                Dictionary<string, string> dic = new Dictionary<string, string>
+                {
+                    ["license_key"]  = reqLicense.LicenseKey,
+                    ["program_num"]  = reqLicense.ProgramId,
+                    ["request_type"] = reqLicense.RequestType,
+                    ["ip"]           = reqLicense.Ip,
+                    ["mac"]          = reqLicense.Mac,
+                    ["pc_name"]      = reqLicense.PcName,
+                    ["user_name"]    = reqLicense.UserName,
+                };
+
+                HttpClient client = new HttpClient();
                 FormUrlEncodedContent content = new FormUrlEncodedContent(dic);
                 HttpResponseMessage response = await client.PostAsync(apiUrl, content);
                 string str = await response.Content.ReadAsStringAsync();
                 result = JsonConvert.DeserializeObject<ResLicense>(str) ?? result;
-                //result.result = 1;
             }
             catch (Exception ex)
             {
@@ -294,17 +367,7 @@ namespace BH_Install.ViewModels
             return result;
         }
 
-        [RelayCommand]
-        private void Back()
-        {
-            if (CurrentStep is StepEula)
-                GoTo(StepWelcome);
-            else if (CurrentStep is StepLicense)
-                GoTo(StepEula);
-        }
-
-        [RelayCommand]
-        private void Cancel() => CloseRequested?.Invoke(this, EventArgs.Empty);
+        // ----- 위저드 이동 -----
 
         private void GoTo(int step)
         {
@@ -346,7 +409,9 @@ namespace BH_Install.ViewModels
             }
         }
 
-        // 설치 진행. 단계마다 실제 작업을 기다리며, 오류가 나면 거기서 멈추고 완료 화면에 사유를 보여준다.
+        // ----- 설치 진행 -----
+
+        //설치 진행. 단계마다 실제 작업을 기다리며, 오류가 나면 거기서 멈추고 완료 화면에 사유를 보여준다.
         private async Task RunInstallAsync()
         {
             Percent = 0;
@@ -361,7 +426,7 @@ namespace BH_Install.ViewModels
 
             while (Percent < 100 && !_failed)
             {
-                // 임계값을 넘긴 단계로 진입하며, 실제 작업이 있으면 끝날 때까지 기다린다.
+                //임계값을 넘긴 단계로 진입하며, 실제 작업이 있으면 끝날 때까지 기다린다.
                 while (!_failed && stageIndex + 1 < Stages.Length && Percent >= Stages[stageIndex + 1].At)
                 {
                     stageIndex++;
@@ -407,9 +472,9 @@ namespace BH_Install.ViewModels
             GoTo(StepDone);
         }
 
-        // ===== 설치 단계 =====
+        // ----- 설치 단계 -----
 
-        // 실제 모드면 백그라운드에서 작업을 수행하고, 미리보기 모드면 잠깐 기다리기만 한다.
+        //실제 모드면 백그라운드에서 작업을 수행하고, 미리보기 모드면 잠깐 기다리기만 한다.
         private Task RunReal(Action work)
         {
             if (!_isReal)
@@ -433,8 +498,8 @@ namespace BH_Install.ViewModels
                 : $"기존 설치(v{previous})를 발견했습니다. 덮어써서 업그레이드합니다.");
         });
 
-        // BH Soft 루트 CA 인증서를 신뢰할 수 있는 루트 저장소에 설치한다.
-        // 이 인증서가 없으면 설치되는 런처와 이후 업데이트 파일의 코드 서명이 "알 수 없는 게시자"로 표시된다.
+        //BH Soft 루트 CA 인증서를 신뢰할 수 있는 루트 저장소에 설치한다.
+        //이 인증서가 없으면 설치되는 런처와 이후 업데이트 파일의 코드 서명이 "알 수 없는 게시자"로 표시된다.
         private async Task InstallRootCertificateAsync()
         {
             CertInstallReport report = await Task.Run(() => CertificateInstaller.InstallRoot(AddLog));
@@ -444,7 +509,7 @@ namespace BH_Install.ViewModels
 
             if (!report.IsSuccess)
             {
-                // 인증서 설치 실패가 설치 전체를 막지는 않는다.
+                //인증서 설치 실패가 설치 전체를 막지는 않는다.
                 AddLog("서명 검증 없이 설치를 계속합니다.");
             }
         }
@@ -478,8 +543,9 @@ namespace BH_Install.ViewModels
             AddLog($"바로 가기: {lnk}");
         });
 
+        // ----- 완료 -----
 
-        // 완료 화면의 [지금 실행] 이 켜져 있으면 런처를 띄운다.
+        //완료 화면의 [지금 실행] 이 켜져 있으면 런처를 띄운다.
         private void LaunchProgram()
         {
             if (!_isReal || !File.Exists(LauncherPath))
@@ -499,7 +565,9 @@ namespace BH_Install.ViewModels
             }
         }
 
-        // 백그라운드 스레드에서도 호출되므로 UI 스레드로 넘긴다.
+        // ----- 로그 -----
+
+        //백그라운드 스레드에서도 호출되므로 UI 스레드로 넘긴다.
         private void AddLog(string text)
         {
             string line = $"[{DateTime.Now:HH:mm:ss}]  {text}";
@@ -511,5 +579,7 @@ namespace BH_Install.ViewModels
             else
                 dispatcher.Invoke(() => Logs.Add(line));
         }
+
+        #endregion
     }
 }

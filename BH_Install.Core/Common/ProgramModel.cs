@@ -1,8 +1,8 @@
-﻿namespace BH_Install.Core
+﻿namespace BH_Install.Core.Common
 {
     //설치 대상 프로그램 정보(프로그램 매니페스트).
-    //메이커가 채워 <프로젝트>.bhinstaller.json 에 저장하고, 게시할 때 program.json 으로
-    //설치·런처·언인스톨 모듈에 임베드한다. 모듈은 ProgramManifest.LoadEmbedded() 로 읽는다.
+    //메이커가 [설치 파일 빌드] 때 ProgramManifest.SaveToModel() 로 BH_Install.Core\Resources\ProgramModel.json 에 저장하고,
+    //그 파일이 포함 리소스로 BH_Install.Core.dll 에 들어간다. 설치·런처·언인스톨 모듈은 ProgramManifest.Instance.ProgramModel 로 읽는다.
     public class ProgramModel
     {
         //프로그램 이름. "앱 및 기능" 의 Uninstall 레지스트리 키 이름으로도 쓴다.
@@ -25,7 +25,8 @@
         public string UpdateUrl { get; set; } = "";
         //프로그램 아이콘
         public string MainIcon { get; set; } = "";
-
+        //런처의 버전
+        public string VerLauncher { get; set; } = "";
         //라이선스 인증은 모든 프로그램이 필수로 사용한다. DB 에서 확인하는 프로그램 ID.
         public int ProgramId { get; set; } = 0;
     }

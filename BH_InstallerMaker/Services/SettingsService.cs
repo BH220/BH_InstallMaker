@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Text.Json;
 using BH_Install.Core;
+using BH_Install.Core.Manager;
 
 namespace BH_InstallerMaker.Services
 {

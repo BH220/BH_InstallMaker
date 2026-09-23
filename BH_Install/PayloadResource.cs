@@ -8,13 +8,13 @@ namespace BH_Install
     //설치 단계에서 설치 폴더로 꺼낸다. F5 실행처럼 임베드가 없으면 Extract 가 false 를 돌려준다.
     internal static class PayloadResource
     {
-        public const string Launcher = "BH.payload.BH_Launcher.exe";
-        public const string Uninstall = "BH.payload.BH_Uninstall.exe";
+        public const string Launcher = "BH_Launcher.exe";
+        public const string Uninstall = "BH_Uninstall.exe";
 
         public static bool Extract(string resourceName, string destinationPath)
         {
             Assembly assembly = typeof(PayloadResource).Assembly;
-            using Stream? stream = assembly.GetManifestResourceStream(resourceName);
+            using Stream? stream = assembly.GetManifestResourceStream($"{assembly.GetName().Name}.Resources.{resourceName}");
             if (stream is null) return false;
 
             string? dir = Path.GetDirectoryName(destinationPath);

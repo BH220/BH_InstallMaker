@@ -1,4 +1,4 @@
-﻿namespace BH_Install.Core
+﻿namespace BH_Install.Core.Common
 {
     //라이선스 DB 의 프로그램 번호(program_num). DB 조회 대신 하드코딩한다.
     //값이 곧 DB 의 번호이므로 바꾸면 안 된다.

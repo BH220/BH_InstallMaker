@@ -1,6 +1,8 @@
-﻿using Microsoft.Win32;
+﻿using BH_Install.Core.Common;
+using BH_Install.Core.Manager;
+using Microsoft.Win32;
 
-namespace BH_Install.Core
+namespace BH_Install.Core.Helper
 {
     //설치 정보를 레지스트리(HKLM)에 기록·삭제한다. 관리자 권한이 필요하다.
     //  - HKLM\{RegistryKey}                          : 프로그램 자체 키. 설치 경로·버전 등. 런처·언인스톨러가 읽는다.
@@ -36,6 +38,7 @@ namespace BH_Install.Core
             key.SetValue("MainExe", m.MainExe);
             key.SetValue("UpdateUrl", m.UpdateUrl);
             key.SetValue("Launcher", launcherPath);
+            key.SetValue("license", LocalLicenseChecker.Instance.CreateToken(m.ProgramId));
             key.SetValue("InstallDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
         }
 

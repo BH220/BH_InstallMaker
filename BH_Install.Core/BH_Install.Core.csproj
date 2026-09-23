@@ -14,12 +14,19 @@
     <EmbeddedResource Include="Resources\BHSoft-RootCA.cer" LogicalName="BH_Install.Core.Resources.BHSoft_RootCA.cer" />
   </ItemGroup>
   <!-- 프로그램 매니페스트. 메이커가 ProgramManifest.SaveToModel() 로 이 파일을 덮어쓴 뒤 모듈을 게시한다.
-       LogicalName 을 지정하지 않으면 리소스 이름이 BH_Install.Core.ProgramModel.json 이 되어 코드의 ResourceName 과 어긋난다. -->
+       LogicalName 을 지정하지 않으면 리소스 이름이 BH_Install.Core.Resources.ProgramModel.json 이 되어 코드의 ResourceName 과 어긋난다. -->
   <ItemGroup>
-    <EmbeddedResource Include="ProgramModel.json" LogicalName="ProgramModel.json" />
+    <EmbeddedResource Include="Resources\ProgramModel.json" LogicalName="ProgramModel.json" />
+  </ItemGroup>
+  <!-- 대상 프로그램 아이콘. 메이커가 SaveToModel() 로 MainIcon 파일을 이 이름으로 복사한 뒤 모듈을 게시한다.
+       WPF 리소스(pack URI)로 넣어 IconResourceLoader 가 그대로 읽는다. 대상에 아이콘이 없으면 Resources\ProgramIcon.default.ico(BH)가 들어간다. -->
+  <ItemGroup>
+    <Resource Include="Resources\ProgramIcon.ico" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <!-- 런처가 갱신 전에 설치 폴더의 서비스를 정지할 때 쓴다 (TargetProcessManager) -->
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.1" />
   </ItemGroup>
 
 </Project>

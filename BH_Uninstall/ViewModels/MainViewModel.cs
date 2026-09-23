@@ -4,6 +4,9 @@ using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using BH_Install.Core;
+using BH_Install.Core.Common;
+using BH_Install.Core.Helper;
+using BH_Install.Core.Manager;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -49,6 +52,11 @@ namespace BH_Uninstall.ViewModels
 
         [ObservableProperty]
         private int screenIndex = ScreenConfirm;
+
+        //완료 화면인지. 하단 버튼이 빨간 [제거] 에서 기본 [닫기] 로 바뀐다.
+        public bool IsDone => ScreenIndex == ScreenDone;
+
+        partial void OnScreenIndexChanged(int value) => OnPropertyChanged(nameof(IsDone));
 
         [ObservableProperty]
         private string actionLabel = "제거";

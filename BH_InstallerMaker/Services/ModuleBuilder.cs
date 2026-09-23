@@ -1,6 +1,8 @@
 ﻿using System.IO;
 using System.Text.RegularExpressions;
 using BH_Install.Core;
+using BH_Install.Core.Common;
+using BH_Install.Core.Manager;
 
 namespace BH_InstallerMaker.Services
 {
@@ -8,7 +10,8 @@ namespace BH_InstallerMaker.Services
     //  런처 게시·서명 → 언인스톨 게시·서명 → (둘을 페이로드로 넣어) 설치 게시·서명 → Setup exe
     //
     //세 모듈은 이 저장소의 프로젝트를 dotnet publish 로 다시 빌드한다.
-    //매니페스트(program.json)는 -p:BH_ProgramJson 으로 넘겨 각 모듈의 임베디드 리소스가 되고(BH.Publish.targets),
+    //매니페스트는 게시 직전에 ProgramManifest.SaveToModel() 로 BH_Install.Core\Resources\ProgramModel.json 에 써 두어
+    //각 모듈이 참조하는 BH_Install.Core.dll 의 포함 리소스로 들어가고,
     //런처·언인스톨 exe 는 -p:BH_LauncherExe / -p:BH_UninstallExe 로 설치 프로그램에 임베드된다(BH_Install.csproj).
     public sealed class ModuleBuilder
     {
@@ -36,7 +39,7 @@ namespace BH_InstallerMaker.Services
             return null;
         }
 
-        public async Task<BuildResult> BuildAsync(ProgramModel model, string workDir, string sourceRoot, SignOptions sign, Action<string> log, string? launcherIconPath = null, CancellationToken ct = default)
+        public async Task<BuildResult> BuildAsync(ProgramModel model, string workDir, string sourceRoot, SignOptions sign, Action<string> log, CancellationToken ct = default)
         {
             //작업 폴더를 비운 상태로 시작
             if (Directory.Exists(workDir))
@@ -50,24 +53,21 @@ namespace BH_InstallerMaker.Services
             if (version is null)
                 log($"버전 '{model.Version}' 은 exe 버전 정보로 쓸 수 없는 형식이라 모듈 버전 표기를 건너뜁니다.");
 
-            //1) 런처 (대상 프로그램의 exe 아이콘을 그대로 쓴다)
-            Dictionary<string, string>? launcherProps = null;
-            if (!string.IsNullOrWhiteSpace(launcherIconPath) && File.Exists(launcherIconPath))
-            {
-                launcherProps = new Dictionary<string, string> { ["BH_LauncherIcon"] = launcherIconPath };
-                log($"런처 아이콘: {launcherIconPath}");
-            }
-            else
-            {
-                log("대상 프로젝트에 ApplicationIcon 이 없어 런처는 기본 아이콘을 씁니다.");
-            }
-            string launcherExe = await PublishModuleAsync(model, sourceRoot, LauncherProject, Path.Combine(workDir, "launcher"),
-                 version, launcherProps, log, ct);
+            //1) 런처. exe 아이콘은 SaveToModel() 이 Core 에 복사해 둔 ProgramIcon.ico(대상 아이콘, 없으면 BH 기본)를 쓴다.
+            //   대상 .ico 를 직접 넘기지 않는 이유: 그 파일은 수정 시각이 오래되어 증분 빌드가 바뀐 걸 모르고 옛 아이콘을 남긴다.
+            //   Core 의 사본은 SaveToModel() 이 수정 시각을 갱신하므로 매번 새로 들어간다.
+            string launcherIcon = Path.Combine(sourceRoot, "BH_Install.Core", "Resources", "ProgramIcon.ico");
+            var launcherProps = new Dictionary<string, string> { ["BH_LauncherIcon"] = launcherIcon };
+            log(string.IsNullOrWhiteSpace(model.MainIcon)
+                ? "대상 프로젝트에 ApplicationIcon 이 없어 런처는 기본 아이콘을 씁니다."
+                : $"런처 아이콘: {model.MainIcon}");
+            string launcherExe = await PublishModuleAsync(sourceRoot, LauncherProject, Path.Combine(workDir, "launcher"),
+                version, launcherProps, log, ct);
             await SignAsync(sign, launcherExe, $"{model.Name} 런처", log, ct);
 
             //2) 언인스톨
-            string uninstallExe = await PublishModuleAsync(model, sourceRoot, UninstallProject, Path.Combine(workDir, "uninstall"),
-                 version, null, log, ct);
+            string uninstallExe = await PublishModuleAsync(sourceRoot, UninstallProject, Path.Combine(workDir, "uninstall"),
+                version, null, log, ct);
             await SignAsync(sign, uninstallExe, $"{model.Name} 제거", log, ct);
 
             //3) 설치 (서명된 런처·언인스톨을 페이로드로 포함)
@@ -76,11 +76,8 @@ namespace BH_InstallerMaker.Services
                 ["BH_LauncherExe"] = launcherExe,
                 ["BH_UninstallExe"] = uninstallExe,
             };
-            //설치 화면 로고에 쓸 대상 아이콘. 설치 exe 자체의 아이콘은 바꾸지 않는다.
-            if (launcherProps is not null)
-                payload["BH_ProgramIcon"] = launcherIconPath!;
-            string installExe = await PublishModuleAsync(model, sourceRoot, InstallProject, Path.Combine(workDir, "install"),
-                 version, payload, log, ct);
+            string installExe = await PublishModuleAsync(sourceRoot, InstallProject, Path.Combine(workDir, "install"),
+                version, payload, log, ct);
             await SignAsync(sign, installExe, $"{model.Name} 설치", log, ct);
 
             //4) 최종 파일명
@@ -92,8 +89,8 @@ namespace BH_InstallerMaker.Services
             return new BuildResult(setupPath, launcherExe, uninstallExe);
         }
 
-        private async Task<string> PublishModuleAsync(ProgramModel model,
-            string sourceRoot, string project, string outDir,string? version,
+        private async Task<string> PublishModuleAsync(
+            string sourceRoot, string project, string outDir, string? version,
             IReadOnlyDictionary<string, string>? extraProps, Action<string> log, CancellationToken ct)
         {
             string csproj = Path.Combine(sourceRoot, project, project + ".csproj");

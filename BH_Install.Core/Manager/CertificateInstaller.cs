@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 
-namespace BH_Install.Core
+namespace BH_Install.Core.Manager
 {
     //루트 인증서 설치 결과 상태
     public enum CertInstallStatus
@@ -95,7 +95,7 @@ namespace BH_Install.Core
 
                 if (storeLocation == StoreLocation.LocalMachine && !IsElevated())
                 {
-                    return Fail(cert, subject, thumbprint,
+                    return Fail(subject, thumbprint,
                         "관리자 권한이 없어 루트 인증서를 설치할 수 없습니다.", null, log);
                 }
 
@@ -181,11 +181,11 @@ namespace BH_Install.Core
                 thumbprint = cert.Thumbprint ?? string.Empty;
             }
 
-            return Fail(cert, subject, thumbprint, message, ex, log);
+            return Fail(subject, thumbprint, message, ex, log);
         }
 
         private static CertInstallReport Fail(
-            X509Certificate2? cert, string subject, string thumbprint,
+            string subject, string thumbprint,
             string message, Exception? ex, Action<string>? log)
         {
             log?.Invoke($"경고: {message}");

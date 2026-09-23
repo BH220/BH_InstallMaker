@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 
-namespace BH_Install.Core
+namespace BH_Install.Core.Helper
 {
     //BHS_Api 의 Crypto(PHP) 와 같은 형식의 AES-256-GCM 암복호화.
     //  저장 형식 : "v1:base64( iv(12) + tag(16) + ciphertext )"

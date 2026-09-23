@@ -8,6 +8,7 @@
   "RegistryKey": "SOFTWARE\\BH Soft\\BH Vpn Browser",
   "MainExe": "BH_VpnBrowser.exe",
   "UpdateUrl": "https://vb.bhsoft.co.kr/",
-  "MainIcon": "",
-  "ProgramId": 0
+  "MainIcon": "C:\\git\\BH_VpnBrowser\\BH_VpnBrowser\\Assets\\AppIcon.ico",
+  "VerLauncher": "",
+  "ProgramId": 8
 }

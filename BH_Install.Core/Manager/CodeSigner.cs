@@ -3,7 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-namespace BH_Install.Core
+namespace BH_Install.Core.Manager
 {
     //PFX 검사 결과
     public sealed class PfxCheckResult

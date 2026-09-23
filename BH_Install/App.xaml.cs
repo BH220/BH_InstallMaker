@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using BH_Install.Core;
+using BH_Install.Core.Helper;
 using BH_Install.Views;
 using Microsoft.Extensions.DependencyInjection;
 

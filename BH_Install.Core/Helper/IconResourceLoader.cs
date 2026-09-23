@@ -2,7 +2,7 @@
 using System.Windows;
 using System.Windows.Media.Imaging;
 
-namespace BH_Install.Core
+namespace BH_Install.Core.Helper
 {
     //어셈블리 리소스의 .ico 에서 원하는 크기에 가장 맞는 프레임을 골라 Image 에 쓸 BitmapSource 로 돌려준다.
     //Image.Source 에 .ico 를 바로 주면 첫 프레임(대개 16px)이 쓰여 흐려지므로 직접 고른다.

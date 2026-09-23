@@ -7,7 +7,7 @@ using System.Text;
 using System.Windows;
 using Microsoft.Win32.SafeHandles;
 
-namespace BH_Install.Core
+namespace BH_Install.Core.Helper
 {
     //모든 앱(메이커·설치·런처·언인스톨)의 App.OnStartup 이 공통으로 쓰는 시작 처리.
     //  - 관리자 권한이 아니면 자기 자신을 관리자로 다시 실행

@@ -1,12 +1,22 @@
-﻿using Newtonsoft.Json;
+﻿using BH_Install.Core.Common;
+using Newtonsoft.Json;
 using System.IO;
 using System.Reflection; 
 
-namespace BH_Install.Core
+namespace BH_Install.Core.Manager
 {
     public class ProgramManifest
     {
+        //포함 리소스 이름(csproj 의 LogicalName)과, SaveToModel() 이 덮어쓰는 소스 파일 경로(프로젝트 폴더 기준)
         private const string ResourceName = "ProgramModel.json";
+        private const string ModelFile = @"Resources\ProgramModel.json";
+
+        //대상 프로그램 아이콘. SaveToModel() 이 MainIcon 파일을 IconFile 로 복사해 두면 WPF 리소스로 dll 에 들어간다.
+        //모듈은 IconResourceLoader.LoadBestFrame(IconResourcePath, 크기) 로 읽는다.
+        private const string IconFile = @"Resources\ProgramIcon.ico";
+        private const string DefaultIconFile = @"Resources\ProgramIcon.default.ico";
+        public const string IconResourcePath = "BH_Install.Core;component/Resources/ProgramIcon.ico";
+
         public ProgramModel ProgramModel { get; private set; }
 
         //매니페스트가 채워져 있는지. 메이커는 MainExe 를 항상 넣으므로 비어 있으면 빌드를 거치지 않은 것(F5, 빈 ProgramModel.json)이다.
@@ -69,9 +79,20 @@ namespace BH_Install.Core
                 ?? throw new DirectoryNotFoundException(
                     $"{CoreProjectName} 프로젝트 폴더를 찾을 수 없습니다. 메이커는 이 저장소 안에서 실행해야 합니다.");
 
-            string path = Path.Combine(dir, ResourceName);
+            string path = Path.Combine(dir, ModelFile);
             string json = JsonConvert.SerializeObject(model, Formatting.Indented);
             File.WriteAllText(path, json, new System.Text.UTF8Encoding(false));
+
+            //아이콘: MainIcon(메이커 PC 의 .ico 절대 경로)은 설치 대상 PC 에 없으므로 파일 자체를 리소스로 넣는다.
+            //대상 프로젝트에 아이콘이 없으면 기본(BH) 아이콘으로 되돌려 이전 빌드의 아이콘이 남지 않게 한다.
+            string iconSource = !string.IsNullOrWhiteSpace(model.MainIcon) && File.Exists(model.MainIcon)
+                ? model.MainIcon
+                : Path.Combine(dir, DefaultIconFile);
+            string iconPath = Path.Combine(dir, IconFile);
+            File.Copy(iconSource, iconPath, overwrite: true);
+            //File.Copy 는 원본의 수정 시각을 그대로 옮기므로, 그대로 두면 MSBuild 증분 빌드가 "바뀐 게 없다"고 보고 이전 아이콘을 다시 넣는다
+            File.SetLastWriteTimeUtc(iconPath, DateTime.UtcNow);
+
             ProgramModel = model;
         }
 

@@ -14,6 +14,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Resources\BH_Launcher.exe" />
+    <None Remove="Resources\BH_Uninstall.exe" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\BH_Launcher.exe" />
+    <EmbeddedResource Include="Resources\BH_Uninstall.exe" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
@@ -27,16 +37,9 @@
     <Resource Include="main_icon.ico" />
   </ItemGroup>
 
-  <!-- 설치 화면 좌상단 로고에 쓰는 대상 프로그램 아이콘. 메이커가 -p:BH_ProgramIcon=<대상 .ico> 로 넘길 때만 들어간다.
-       없으면(VS 게시, F5) 코드가 main_icon.ico 로 대체한다. 같은 파일을 두 항목으로 넣으면 리소스 이름이 충돌하므로 기본값을 두지 않는다.
-       설치 exe 자체의 아이콘(ApplicationIcon)은 main_icon.ico 그대로다. -->
-  <ItemGroup Condition="'$(BH_ProgramIcon)' != ''">
-    <Resource Include="$(BH_ProgramIcon)" Link="program_icon.ico" />
-  </ItemGroup>
-
   <!-- 메이커가 게시할 때 서명된 런처·언인스톨 exe 를 페이로드로 임베드한다.
        -p:BH_LauncherExe=<경로> -p:BH_UninstallExe=<경로>
-       설치 프로그램은 ProgramManifest.ExtractPayload() 로 설치 폴더에 꺼낸다. -->
+       설치 프로그램은 PayloadResource.Extract() 로 설치 폴더에 꺼낸다. LogicalName 은 PayloadResource 의 상수와 같아야 한다. -->
   <ItemGroup Condition="'$(BH_LauncherExe)' != ''">
     <EmbeddedResource Include="$(BH_LauncherExe)" LogicalName="BH.payload.BH_Launcher.exe" />
   </ItemGroup>
@@ -44,7 +47,7 @@
     <EmbeddedResource Include="$(BH_UninstallExe)" LogicalName="BH.payload.BH_Uninstall.exe" />
   </ItemGroup>
 
-  <!-- 게시 폴더 초기화, pdb 제외, 매니페스트 임베드, 게시 후 코드 서명 등 공용 게시 규칙 -->
+  <!-- 게시 폴더 초기화, pdb 제외, 게시 후 코드 서명 등 공용 게시 규칙 -->
   <Import Project="..\BH.Publish.targets" />
 
 </Project>
