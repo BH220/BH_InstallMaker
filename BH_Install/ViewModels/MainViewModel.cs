@@ -62,7 +62,7 @@ namespace BH_Install.ViewModels
             new(50, "레지스트리 등록 중...",                     vm => vm.RegisterAsync()),
             new(64, "시작 메뉴 바로 가기 생성 중...",             vm => vm.CreateShortcutAsync(ShortcutHelper.StartMenuDirFor(vm._model))),
             new(76, "바탕화면 아이콘 생성 중...",                 vm => vm.CreateShortcutAsync(ShortcutHelper.DesktopDir)),
-            new(92, "설치 마무리 중...",                         null),
+            new(92, "설치 마무리 중...",                         vm => vm.FinishAsync()),
         };
 
         #endregion
@@ -530,10 +530,13 @@ namespace BH_Install.ViewModels
 
             RegisterHelper.WriteProgramInfo(_model, LauncherPath);
             RegisterHelper.WriteUninstallEntry(_model, UninstallerPath, LauncherPath, bytes);
+            RegisterHelper.WriteAppPath(_model, LauncherPath);
 
             if (!string.IsNullOrWhiteSpace(_model.RegistryKey))
                 AddLog($"레지스트리: HKLM\\{_model.RegistryKey}");
             AddLog("앱 및 기능 목록에 등록했습니다.");
+            if (!string.IsNullOrWhiteSpace(_model.ExeCommand))
+                AddLog($"실행 명령 등록: {_model.ExeCommand.Trim()} (실행창에서 입력하면 런처가 실행됩니다)");
         });
 
         private Task CreateShortcutAsync(string directory) => RunReal(() =>
@@ -542,6 +545,9 @@ namespace BH_Install.ViewModels
             ShortcutHelper.Create(lnk, LauncherPath, _model.Description, _model.RootPath);
             AddLog($"바로 가기: {lnk}");
         });
+
+        //셸에 아이콘 변경을 알린다. 같은 경로에 아이콘이 다른 런처를 덮어썼을 때 시작 메뉴·바탕화면에 옛 아이콘이 남지 않게 한다.
+        private Task FinishAsync() => RunReal(ShortcutHelper.RefreshShellIcons);
 
         // ----- 완료 -----
 

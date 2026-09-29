@@ -254,6 +254,14 @@
                                     Style="{StaticResource Text.Caption}"
                                     Text="예: https://update.bhsoft.co.kr/myapp/   프로그램마다 다른 값이며 매니페스트에 담겨 런처로 전달됩니다."
                                     TextWrapping="Wrap" />
+
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="실행 명령 (Win+R 실행창에서 입력하면 런처가 실행됩니다)" />
+                                <TextBox Style="{StaticResource Tb.Modern}" Text="{Binding ExeCommand, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock
+                                    Margin="0,6,0,0"
+                                    Style="{StaticResource Text.Caption}"
+                                    Text="예: vpnbrowser   영문·숫자·-·_ 만, 공백·확장자 없이 입력합니다. 비워 두면 등록하지 않습니다."
+                                    TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
 

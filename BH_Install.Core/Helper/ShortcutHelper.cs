@@ -1,5 +1,6 @@
 ﻿using BH_Install.Core.Common;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace BH_Install.Core.Helper
 {
@@ -57,6 +58,25 @@ namespace BH_Install.Core.Helper
             if (!File.Exists(lnkPath)) return false;
             File.Delete(lnkPath);
             return true;
+        }
+
+        [DllImport("shell32.dll")]
+        private static extern void SHChangeNotify(int wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
+
+        private const int SHCNE_ASSOCCHANGED = 0x08000000;
+
+        //아이콘이 바뀌었음을 셸에 알려 아이콘 캐시를 갱신한다.
+        //같은 경로에 아이콘이 다른 런처를 덮어써 설치(재설치·업그레이드)하면 탐색기가 캐시해 둔 옛 아이콘을 시작 메뉴·바탕화면에 계속 보여 주는데, 이를 막는다.
+        public static void RefreshShellIcons()
+        {
+            try
+            {
+                SHChangeNotify(SHCNE_ASSOCCHANGED, 0, IntPtr.Zero, IntPtr.Zero);
+            }
+            catch
+            {
+                //알림 실패는 설치 결과에 영향이 없다
+            }
         }
     }
 }

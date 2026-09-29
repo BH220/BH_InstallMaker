@@ -10,5 +10,6 @@
   "UpdateUrl": "https://vb.bhsoft.co.kr/",
   "MainIcon": "C:\\git\\BH_VpnBrowser\\BH_VpnBrowser\\Assets\\AppIcon.ico",
   "VerLauncher": "",
-  "ProgramId": 8
+  "ProgramId": 8,
+  "ExeCommand": "vb"
 }

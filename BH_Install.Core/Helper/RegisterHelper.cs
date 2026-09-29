@@ -5,11 +5,21 @@ using Microsoft.Win32;
 namespace BH_Install.Core.Helper
 {
     //설치 정보를 레지스트리(HKLM)에 기록·삭제한다. 관리자 권한이 필요하다.
-    //  - HKLM\{RegistryKey}                          : 프로그램 자체 키. 설치 경로·버전 등. 런처·언인스톨러가 읽는다.
-    //  - HKLM\...\CurrentVersion\Uninstall\{Code}    : Windows "앱 및 기능" 목록 항목. 언인스톨러를 연결한다.
+    //  - HKLM\{RegistryKey}                             : 프로그램 자체 키. 설치 경로·버전 등. 런처·언인스톨러가 읽는다.
+    //  - HKLM\...\CurrentVersion\Uninstall\{Name}       : Windows "앱 및 기능" 목록 항목. 언인스톨러를 연결한다.
+    //  - HKLM\...\CurrentVersion\App Paths\{Cmd}.exe    : 실행창(Win+R)에서 ExeCommand 만 입력해도 런처가 뜨게 하는 단축 명령.
     public static class RegisterHelper
     {
         private const string UninstallRoot = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+        private const string AppPathsRoot = @"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths";
+
+        //App Paths 의 키 이름은 exe 이름이어야 하므로 {ExeCommand}.exe 로 만든다. ExeCommand 가 비어 있으면 null (등록하지 않음).
+        private static string? AppPathKeyName(ProgramModel m)
+        {
+            string command = (m.ExeCommand ?? string.Empty).Trim();
+            if (command.Length == 0) return null;
+            return command.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? command : command + ".exe";
+        }
 
         //Uninstall 하위 키 이름. 프로그램 이름을 그대로 쓴다 (버전이 바뀌어도 같아야 업그레이드로 처리된다).
         private static string UninstallKeyName(ProgramModel m) => m.Name.Trim();
@@ -61,6 +71,20 @@ namespace BH_Install.Core.Helper
             key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
         }
 
+        //실행창(Win+R)·명령 프롬프트에서 ExeCommand 만 입력해도 런처가 실행되도록 App Paths 에 등록한다.
+        //Windows 는 입력한 이름에 .exe 를 붙여 App Paths 에서 찾고, 그 키의 기본값(전체 경로)을 실행한다. ExeCommand 가 비어 있으면 건너뛴다.
+        public static void WriteAppPath(ProgramModel m, string launcherPath)
+        {
+            string? keyName = AppPathKeyName(m);
+            if (keyName is null) return;
+
+            using RegistryKey key = Registry.LocalMachine.CreateSubKey($@"{AppPathsRoot}\{keyName}", writable: true)
+                ?? throw new InvalidOperationException($"App Paths 레지스트리 키를 만들 수 없습니다: {keyName}");
+
+            key.SetValue(string.Empty, launcherPath);
+            key.SetValue("Path", m.RootPath);
+        }
+
         //설치 때 만든 키를 모두 지운다. 없으면 조용히 넘어간다.
         public static void Remove(ProgramModel m)
         {
@@ -70,6 +94,9 @@ namespace BH_Install.Core.Helper
                 Registry.LocalMachine.DeleteSubKeyTree(m.RegistryKey, throwOnMissingSubKey: false);
             }
             Registry.LocalMachine.DeleteSubKeyTree($@"{UninstallRoot}\{UninstallKeyName(m)}", throwOnMissingSubKey: false);
+
+            if (AppPathKeyName(m) is { } appPathKey)
+                Registry.LocalMachine.DeleteSubKeyTree($@"{AppPathsRoot}\{appPathKey}", throwOnMissingSubKey: false);
         }
 
         //프로그램 자체 키의 값을 읽는다. 없으면 null.

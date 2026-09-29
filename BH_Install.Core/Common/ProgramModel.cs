@@ -29,5 +29,7 @@
         public string VerLauncher { get; set; } = "";
         //라이선스 인증은 모든 프로그램이 필수로 사용한다. DB 에서 확인하는 프로그램 ID.
         public int ProgramId { get; set; } = 0;
+        //윈도우 실행창을 통해 바로 실행 가능한 명령어를 지정한다. 빈값인 경우 처리하지 않는다.
+        public string ExeCommand { get; set; } = "";
     }
 }

@@ -70,6 +70,10 @@ namespace BH_InstallerMaker.ViewModels
         [ObservableProperty]
         private string updateUrl = "";
 
+        //윈도우 실행창(Win+R)에서 이 이름만 입력하면 런처가 뜨게 하는 단축 명령. 설치 프로그램이 App Paths 에 등록한다. 비우면 등록하지 않는다.
+        [ObservableProperty]
+        private string exeCommand = "";
+
         // ===== 설치 경로 =====
         [ObservableProperty]
         private string rootPath = "";
@@ -351,6 +355,7 @@ namespace BH_InstallerMaker.ViewModels
 
             //업데이트 서버 주소: 대상 저장소의 docs\CNAME(GitHub Pages 도메인)이 있으면 https://{도메인}/ 로 채운다
             UpdateUrl = ResolveUpdateUrlFromCname(_projectDir);
+            ExeCommand = "";
             SelectedProgram = null;
         }
 
@@ -448,16 +453,21 @@ namespace BH_InstallerMaker.ViewModels
             // ----- 배포 저장소 (docs) -----
             string slnDir = await PrePublishToDocsAsync(outDir, projectDir);
 
-            //BH_Install, BH_Launcher, BH_Uninstall 3가지의 프로젝트를 빌드하고,
-            //BH_install 의 최종 결과물을 docs 폴더의 install.exe 로 복사 한다
+            //BH_Launcher, BH_Uninstall, BH_Install 을 빌드해 설치 exe 를 만든다
             string setupPath = await BuildInstallerAsync(model, sign);
 
-            Log("========== 빌드 완료 ==========");
+            //설치 파일은 zip 으로 한 번 감싼다. exe 를 그대로 두면 브라우저가 다운로드를 막는 경우가 있다.
+            //로컬에는 {Setup}.exe.zip, docs 에는 고정 이름 install.exe.zip 으로 두어 사이트의 다운로드 링크가 버전과 무관하게 유지되게 한다.
+            string setupZip = await ZipSetupAsync(setupPath);
+            File.Copy(setupZip, Path.Combine(slnDir, "docs", "install.exe.zip"), overwrite: true);
+            Log("docs 에 install.exe.zip 복사 완료");
 
             await PublishToDocsAsync(slnDir);
 
-            //결과 폴더를 탐색기로 열고 설치 파일을 선택해 둔다
-            OpenInExplorer(setupPath);
+            Log("========== 빌드 완료 ==========");
+
+            //결과 폴더를 탐색기로 열고 설치 파일 압축본을 선택해 둔다
+            OpenInExplorer(setupZip);
         }
 
         // ===== 대상 프로그램 =====
@@ -752,6 +762,24 @@ namespace BH_InstallerMaker.ViewModels
             return result.SetupPath;
         }
 
+        //설치 exe 를 {이름}.exe.zip 으로 압축한다 (항목 이름은 exe 파일 이름 그대로). 압축본 경로를 돌려준다.
+        private async Task<string> ZipSetupAsync(string setupPath)
+        {
+            string zipPath = setupPath + ".zip";
+            Log("설치 파일 압축 중...");
+
+            await Task.Run(() =>
+            {
+                if (File.Exists(zipPath))
+                    File.Delete(zipPath);
+                using ZipArchive archive = ZipFile.Open(zipPath, ZipArchiveMode.Create);
+                archive.CreateEntryFromFile(setupPath, Path.GetFileName(setupPath), CompressionLevel.Optimal);
+            });
+
+            Log($"설치 파일 압축 완료: {zipPath} ({new FileInfo(zipPath).Length / 1024.0 / 1024.0:0.0} MB)");
+            return zipPath;
+        }
+
         //화면 값으로 모델을 만든다 (검증 없음). CollectModel() 이 검증 뒤에 호출한다.
         private ProgramModel BuildModel() => new()
         {
@@ -764,6 +792,7 @@ namespace BH_InstallerMaker.ViewModels
             RegistryKey = RegistryKey.Trim(),
             MainExe = MainExe.Trim(),
             UpdateUrl = UpdateUrl.Trim(),
+            ExeCommand = ExeCommand.Trim(),
             MainIcon = _iconPath ?? "",
             ProgramId = SelectedProgram?.Number ?? 0,
         };
@@ -800,6 +829,13 @@ namespace BH_InstallerMaker.ViewModels
             if (SelectedProgram is null)
             {
                 StatusText = "배포 소스에서 프로그램(라이선스 DB)을 선택하세요.";
+                return null;
+            }
+            //실행창에 입력하는 이름이므로 공백·경로 문자·확장자가 들어가면 안 된다
+            string command = ExeCommand.Trim();
+            if (command.Length > 0 && !command.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-'))
+            {
+                StatusText = "실행 명령은 영문·숫자·-·_ 만 쓸 수 있습니다. 공백이나 확장자 없이 입력하세요.";
                 return null;
             }
             if (!Uri.TryCreate(UpdateUrl.Trim(), UriKind.Absolute, out Uri? updateUri)
