@@ -13,6 +13,9 @@
     <BH_SignDescription>BH Soft Installer</BH_SignDescription>
   </PropertyGroup>
 
+  <!-- 설치 프로그램에 들어가는 런처·언인스톨 exe (페이로드). 메이커(ModuleBuilder)가 게시 직전에 서명된 최신 빌드본으로 덮어쓴다.
+       리소스 이름은 BH_Install.Resources.BH_Launcher.exe 형식이며 PayloadResource.Extract() 가 그 이름으로 꺼낸다.
+       F5 실행을 위해 파일은 항상 있어야 하지만, 여기 들어 있는 내용은 빌드 산출물이라 배포 결과와 무관하다. -->
   <ItemGroup>
     <None Remove="Resources\BH_Launcher.exe" />
     <None Remove="Resources\BH_Uninstall.exe" />
@@ -35,16 +38,6 @@
 
   <ItemGroup>
     <Resource Include="main_icon.ico" />
-  </ItemGroup>
-
-  <!-- 메이커가 게시할 때 서명된 런처·언인스톨 exe 를 페이로드로 임베드한다.
-       -p:BH_LauncherExe=<경로> -p:BH_UninstallExe=<경로>
-       설치 프로그램은 PayloadResource.Extract() 로 설치 폴더에 꺼낸다. LogicalName 은 PayloadResource 의 상수와 같아야 한다. -->
-  <ItemGroup Condition="'$(BH_LauncherExe)' != ''">
-    <EmbeddedResource Include="$(BH_LauncherExe)" LogicalName="BH.payload.BH_Launcher.exe" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(BH_UninstallExe)' != ''">
-    <EmbeddedResource Include="$(BH_UninstallExe)" LogicalName="BH.payload.BH_Uninstall.exe" />
   </ItemGroup>
 
   <!-- 게시 폴더 초기화, pdb 제외, 게시 후 코드 서명 등 공용 게시 규칙 -->

@@ -6,7 +6,7 @@
     xmlns:local="clr-namespace:BH_Launcher.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="clr-namespace:BH_Launcher.ViewModels"
-    Title="런처"
+    Title="{Binding ProgramName}"
     Width="384"
     Height="180"
     d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"

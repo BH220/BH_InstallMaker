@@ -70,14 +70,17 @@ namespace BH_InstallerMaker.Services
                 version, null, log, ct);
             await SignAsync(sign, uninstallExe, $"{model.Name} 제거", log, ct);
 
-            //3) 설치 (서명된 런처·언인스톨을 페이로드로 포함)
-            var payload = new Dictionary<string, string>
-            {
-                ["BH_LauncherExe"] = launcherExe,
-                ["BH_UninstallExe"] = uninstallExe,
-            };
+            //3) 설치. 서명이 끝난 런처·언인스톨 exe 를 BH_Install\Resources\ 에 복사해 두면 BH_Install.csproj 가 포함 리소스로 넣고
+            //   설치 프로그램이 PayloadResource 로 꺼낸다. 파일 이름은 PayloadResource 의 상수(BH_Launcher.exe / BH_Uninstall.exe)와 같아야 한다.
+            //   이 복사를 빠뜨리면 Resources 에 남아 있던 옛 빌드본(옛 아이콘·옛 코드)이 그대로 설치된다.
+            string installResources = Path.Combine(sourceRoot, InstallProject, "Resources");
+            Directory.CreateDirectory(installResources);
+            CopyPayload(launcherExe, Path.Combine(installResources, "BH_Launcher.exe"));
+            CopyPayload(uninstallExe, Path.Combine(installResources, "BH_Uninstall.exe"));
+            log("설치 프로그램에 넣을 런처·언인스톨 exe 갱신");
+
             string installExe = await PublishModuleAsync(sourceRoot, InstallProject, Path.Combine(workDir, "install"),
-                version, payload, log, ct);
+                version, null, log, ct);
             await SignAsync(sign, installExe, $"{model.Name} 설치", log, ct);
 
             //4) 최종 파일명
@@ -136,6 +139,14 @@ namespace BH_InstallerMaker.Services
             File.Move(exe, newExe, overwrite: true);
             log($"{newName}  {new FileInfo(newExe).Length / 1024} KB");
             return newExe;
+        }
+
+        //페이로드 복사. File.Copy 는 원본의 수정 시각을 그대로 옮기므로 갱신해 두어야
+        //MSBuild 증분 빌드가 "바뀐 게 없다"고 보지 않고 새 파일을 다시 임베드한다.
+        private static void CopyPayload(string source, string destination)
+        {
+            File.Copy(source, destination, overwrite: true);
+            File.SetLastWriteTimeUtc(destination, DateTime.UtcNow);
         }
 
         //모듈 exe 서명. 서명은 필수이므로 건너뛰는 경로가 없다.
